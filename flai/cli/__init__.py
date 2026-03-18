@@ -7,6 +7,6 @@ __version__ = "1.0.0"
 __author__ = "Alex Yucra"
 
 # Exportar funções principais
-from flai.cli.utils2.ollama_manager import run_ollama, get_ollama_manager
+# from flai.cli.utils2.ollama_manager import run_ollama, get_ollama_manager
 
-__all__ = ['run_ollama', 'get_ollama_manager']
+# __all__ = ['run_ollama', 'get_ollama_manager']
