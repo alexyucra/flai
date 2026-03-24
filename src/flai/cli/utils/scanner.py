@@ -1,9 +1,11 @@
 from pathlib import Path
+from typing import Any, Dict, List
 
 IGNORED_DIRS = {".venv", "__pycache__", ".git"}
 
-def scan_project(project_root: Path):
-    result = {
+
+def scan_project(project_root: Path) -> Dict[str, Dict[str, str] | List[str]]:
+    result: Dict[str, Dict[str, str] | List[str]] = {
         "app": {},
         "configs": [],
     }
@@ -20,8 +22,8 @@ def scan_project(project_root: Path):
     return result
 
 
-def scan_dir(base: Path):
-    structure = {}
+def scan_dir(base: Path) -> Dict[str, str]:
+    structure: Dict[str, str | Any] = {}
 
     for item in base.iterdir():
         if item.name in IGNORED_DIRS:
@@ -35,11 +37,11 @@ def scan_dir(base: Path):
     return structure
 
 
-def list_files(base: Path):
+def list_files(base: Path) -> List[str]:
     return [f.name for f in base.glob("*") if f.is_file()]
 
 
-def summarize_file(path: Path, max_lines=30):
+def summarize_file(path: Path, max_lines: int = 30) -> str:
     try:
         lines = path.read_text(errors="ignore").splitlines()
         return "\n".join(lines[:max_lines])

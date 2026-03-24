@@ -6,20 +6,22 @@ from flai.cli.utils.scanner import scan_project
 from flai.cli.utils.context import build_context_map
 from flai.cli.utils.checklist import create_checklist
 from flai.cli.utils.ollama import run_ollama
+
 # from flai.core.project import get_project_root
 
 DEFAULT_PROJECT_NAME = "app"
 
 app = typer.Typer()
 
-def handle_shell():
+
+def handle_shell() -> None:
     """
     Abre o FLAI Shell e analisa o projeto Fleting
     """
     cwd = Path.cwd()
     project_root = cwd / DEFAULT_PROJECT_NAME
-    
-    if not project_root:
+
+    if not project_root.exists():
         console.print("[error]No Fleting projects found.[/error]")
         return
 

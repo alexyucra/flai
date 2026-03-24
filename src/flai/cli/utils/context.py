@@ -1,5 +1,8 @@
-def build_context_map(scan_result: dict) -> str:
-    lines = []
+from typing import Any, Dict, List
+
+
+def build_context_map(scan_result: Dict[str, Dict[str, str] | List[str]]) -> str:
+    lines: List[str] = []
 
     lines.append("Projeto Fleting - Contexto Geral\n")
 
@@ -15,8 +18,8 @@ def build_context_map(scan_result: dict) -> str:
     return "\n".join(lines)
 
 
-def render_tree(tree: dict, indent=0):
-    lines = []
+def render_tree(tree: Dict[str, str], indent: int = 0) -> List[str]:
+    lines: List[str] = []
     space = " " * indent
 
     for key, value in tree.items():
