@@ -1,0 +1,4 @@
+__pycache__/
+coverage.xml
+coverage/
+app/checklist/checklists.md

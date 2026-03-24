@@ -1,5 +1,5 @@
 from pathlib import Path
-from flai.cli.utils.fs import write_utf8, read_utf8
+from flai.cli.utils.fs import write_utf8
 
 CHECKLIST_TEMPLATE = """# Checklist do Projeto Fleting
 
@@ -32,7 +32,8 @@ CHECKLIST_TEMPLATE = """# Checklist do Projeto Fleting
 - [ ] Automatizar migrations
 """
 
-def create_checklist(project_root: Path):
+
+def create_checklist(project_root: Path) -> Path:
     checklist_dir = project_root / "checklist"
     checklist_dir.mkdir(exist_ok=True)
 
