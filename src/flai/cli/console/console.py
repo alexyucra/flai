@@ -1,21 +1,32 @@
-# cli/console/console.py
-from rich.console import Console
-from rich.table import Table
-from rich.panel import Panel
-from rich.columns import Columns
-from rich.text import Text
+from typing import List, Tuple
+
 from rich import box
-from rich.rule import Rule
-from rich.syntax import Syntax
+from rich.columns import Columns
+from rich.console import Console, RenderableType
 from rich.markdown import Markdown
+from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
-from rich.prompt import Prompt, Confirm
+from rich.prompt import Confirm, Prompt
+from rich.rule import Rule
+from rich.style import StyleType
+from rich.syntax import Syntax
+from rich.table import Table
+from rich.text import Text
 from rich.tree import Tree
-from fleting.cli.console.themes import THEMES
+
+from flai.cli.console.theme import THEMES
 
 console = Console(theme=THEMES)
 
-def create_table(title: str = "", columns: list = None, min_width: int = 30) -> Table:
+
+def create_table(
+    title: str = "",
+    columns: (
+        List[RenderableType | Tuple[RenderableType, StyleType | None, int | None]]
+        | None
+    ) = None,
+    min_width: int = 30,
+) -> Table:
     """Create a table with Fleting stile"""
     table = Table(
         show_header=True,
@@ -24,27 +35,37 @@ def create_table(title: str = "", columns: list = None, min_width: int = 30) -> 
         border_style="blue",
         padding=(0, 1),
         min_width=min_width,
-        expand=True
+        expand=True,
     )
-    
+
     if title:
         table.title = f"[bold yellow]{title}[/bold yellow]"
-    
+
     if columns:
         for col in columns:
             if isinstance(col, tuple):
-                table.add_column(col[0], style=col[1], width=col[2] if len(col) > 2 else None)
+                table.add_column(
+                    col[0], style=col[1], width=col[2] if len(col) > 2 else None
+                )
             else:
                 table.add_column(col, style="cyan")
-    
+
     return table
 
-def print_simple_table(headers: list, rows: list, title: str = ""):
+
+def print_simple_table(
+    headers: (
+        List[RenderableType | Tuple[RenderableType, StyleType | None, int | None]]
+        | None
+    ),
+    rows: List[List[RenderableType]],
+    title: str = "",
+) -> None:
     """Print a simple table with styled rows"""
     table = create_table(title, headers)
-    
+
     for row in rows:
-        styled_row = []
+        styled_row: List[str] = []
         for cell in row:
             cell_str = str(cell)
             # Apply styles based on content
@@ -57,19 +78,26 @@ def print_simple_table(headers: list, rows: list, title: str = ""):
             else:
                 styled_cell = f"[cyan]{cell_str}[/cyan]"
             styled_row.append(styled_cell)
-        
+
         table.add_row(*styled_row)
-    
+
     console.print()
     console.print(table)
     console.print()
-    
-def print_pages_table(headers: list, rows: list):
+
+
+def print_pages_table(
+    headers: (
+        List[RenderableType | Tuple[RenderableType, StyleType | None, int | None]]
+        | None
+    ),
+    rows: List[List[RenderableType]],
+) -> None:
     """print page tables with specific colors"""
     table = create_table("📄 Pages Overview", headers, min_width=50)
-    
+
     for row in rows:
-        styled_row = []
+        styled_row: List[str] = []
         for i, cell in enumerate(row):
             if i == 0:  # page name
                 styled_cell = f"[bold cyan]{cell}[/bold cyan]"
@@ -80,47 +108,56 @@ def print_pages_table(headers: list, rows: list):
             else:
                 styled_cell = f"[yellow]{cell}[/yellow]"
             styled_row.append(styled_cell)
-        
+
         table.add_row(*styled_row)
-    
+
     console.print()
     console.print(table)
-    console.print(f"[dim]Legend: [green]✔[/green] = Present | [dim red]—[/dim red] = Missing[/dim]")
+    console.print(
+        "[dim]Legend: [green]✔[/green] = Present | [dim red]—[/dim red] = Missing[/dim]"
+    )
     console.print()
 
-def print_routes_table(headers: list, rows: list):
+
+def print_routes_table(
+    headers: (
+        List[RenderableType | Tuple[RenderableType, StyleType | None, int | None]]
+        | None
+    ),
+    rows: List[List[RenderableType]],
+) -> None:
     """Print routes table with especial style"""
     table = create_table("🛣️ Routes", headers, min_width=40)
-    
+
     for row in rows:
-        styled_row = []
+        styled_row: List[str] = []
         styled_row.append(f"[bold green]{row[0]}[/bold green]")  # Route
         styled_row.append(f"[cyan]{row[1]}[/cyan]")  # View
         table.add_row(*styled_row)
-    
+
     console.print()
     console.print(table)
 
-__all__ = [
-    'console',
-    'Console',
-    'Table',
-    'Panel',
-    'Columns',
-    'Text',
-    'box',
-    'Rule',
-    'Syntax',
-    'Markdown',
-    'Progress',
-    'SpinnerColumn',
-    'TextColumn',
-    'Prompt',
-    'Confirm',
-    'Tree',
-    'create_table',
-    'print_simple_table',
-    'print_pages_table',
-    'print_routes_table',
-]
 
+__all__ = [
+    "console",
+    "Console",
+    "Table",
+    "Panel",
+    "Columns",
+    "Text",
+    "box",
+    "Rule",
+    "Syntax",
+    "Markdown",
+    "Progress",
+    "SpinnerColumn",
+    "TextColumn",
+    "Prompt",
+    "Confirm",
+    "Tree",
+    "create_table",
+    "print_simple_table",
+    "print_pages_table",
+    "print_routes_table",
+]
