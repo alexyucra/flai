@@ -1,7 +1,9 @@
 from typing import Dict, List
 
 
-def get_laptop_models(system_info: Dict[str, int | str | float]) -> List[Dict[str, str]]:
+def get_laptop_models(
+    system_info: Dict[str, int | str | float],
+) -> List[Dict[str, str]]:
     ram = system_info["ram_gb"]
 
     models = [

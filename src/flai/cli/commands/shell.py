@@ -1,20 +1,33 @@
-import typer
 from pathlib import Path
+from typing import Annotated
+
+from typer import Argument, Typer
 
 from flai.cli.console.console import console
-from flai.cli.utils.scanner import scan_project
-from flai.cli.utils.context import build_context_map
 from flai.cli.utils.checklist import create_checklist
+from flai.cli.utils.context import build_context_map
 from flai.cli.utils.ollama import run_ollama
-
-# from flai.core.project import get_project_root
+from flai.cli.utils.scanner import scan_project
 
 DEFAULT_PROJECT_NAME = "app"
 
-app = typer.Typer()
+shell_app = Typer(no_args_is_help=False)
 
 
-def handle_shell() -> None:
+@shell_app.command(
+    name="shell",
+    help="Abre o FLAI Shell e analisa o projeto Fleting",
+    short_help="Interactive AI shell",
+)
+def shell_command(
+    ia: Annotated[
+        str | None,
+        Argument(
+            ...,
+            help="Specific IA to use.",
+        ),
+    ] = None,
+) -> None:
     """
     Abre o FLAI Shell e analisa o projeto Fleting
     """

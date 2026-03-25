@@ -1,21 +1,33 @@
-from typing import List
-
-import typer
 from pathlib import Path
+from typing import Annotated
+
+from rich.table import Table
+from typer import Argument, Exit, Typer, prompt
 
 from flai.cli.console.console import console
-from flai.cli.utils.system import analyze_system, system_checklist
 from flai.cli.utils.models import get_laptop_models
 from flai.cli.utils.ollama import install_ollama, pull_model
-from rich.table import Table
+from flai.cli.utils.system import analyze_system, system_checklist
 
-# from flai.core.project import get_project_root
-
-app = typer.Typer()
 DEFAULT_PROJECT_NAME = "app"
 
+init_app = Typer(no_args_is_help=False)
 
-def handle_init(args: List[str]) -> None:
+
+@init_app.command(
+    name="init",
+    help="Inicializa IA local (LangChain + Ollama) para o projeto Fleting",
+    short_help="Setup local AI environment",
+)
+def init_command(
+    ia: Annotated[
+        str | None,
+        Argument(
+            ...,
+            help="Specific IA to init.",
+        ),
+    ] = None,
+) -> None:
     """
     Inicializa IA local (LangChain + Ollama) para o projeto Fleting
     """
@@ -23,7 +35,7 @@ def handle_init(args: List[str]) -> None:
     project_root = cwd / DEFAULT_PROJECT_NAME
     if not project_root:
         console.print("[error]Projeto Fleting não encontrado[/error]")
-        raise typer.Exit(1)
+        raise Exit(1)
 
     console.print("[bold cyan]Inicializando FLAI (IA Local)[/bold cyan]\n")
 
@@ -54,10 +66,15 @@ def handle_init(args: List[str]) -> None:
     for i, model in enumerate(models, start=1):
         table.add_row(str(i), model["name"], model["ram"], model["description"])
 
+    table.add_row(str(0), "Exit/Sair", "----", "Digite '0' para sair")
+
     console.print(table)
 
     # 4. Escolha do usuário
-    choice = int(typer.prompt("Escolha o modelo", type=int))
+    choice = int(prompt("Escolha o modelo", type=int))
+
+    if choice == 0:
+        raise Exit()
 
     selected = models[choice - 1]
 

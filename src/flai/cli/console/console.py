@@ -1,26 +1,31 @@
-# cli/console/console.py
 from typing import List, Tuple
 
-from rich.console import Console, RenderableType
-from rich.table import Table
-from rich.panel import Panel
-from rich.columns import Columns
-from rich.text import Text
 from rich import box
-from rich.rule import Rule
-from rich.syntax import Syntax
+from rich.columns import Columns
+from rich.console import Console, RenderableType
 from rich.markdown import Markdown
+from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
-from rich.prompt import Prompt, Confirm
-from rich.tree import Tree
+from rich.prompt import Confirm, Prompt
+from rich.rule import Rule
 from rich.style import StyleType
+from rich.syntax import Syntax
+from rich.table import Table
+from rich.text import Text
+from rich.tree import Tree
+
 from flai.cli.console.theme import THEMES
 
 console = Console(theme=THEMES)
 
 
 def create_table(
-    title: str = "", columns: List[RenderableType | Tuple[RenderableType, StyleType | None, int |None]] | None = None, min_width: int = 30
+    title: str = "",
+    columns: (
+        List[RenderableType | Tuple[RenderableType, StyleType | None, int | None]]
+        | None
+    ) = None,
+    min_width: int = 30,
 ) -> Table:
     """Create a table with Fleting stile"""
     table = Table(
@@ -48,7 +53,14 @@ def create_table(
     return table
 
 
-def print_simple_table(headers: List[RenderableType | Tuple[RenderableType, StyleType | None, int |None]] | None, rows: List[List[RenderableType]], title: str = "") -> None:
+def print_simple_table(
+    headers: (
+        List[RenderableType | Tuple[RenderableType, StyleType | None, int | None]]
+        | None
+    ),
+    rows: List[List[RenderableType]],
+    title: str = "",
+) -> None:
     """Print a simple table with styled rows"""
     table = create_table(title, headers)
 
@@ -74,7 +86,13 @@ def print_simple_table(headers: List[RenderableType | Tuple[RenderableType, Styl
     console.print()
 
 
-def print_pages_table(headers: List[RenderableType | Tuple[RenderableType, StyleType | None, int |None]] | None, rows: List[List[RenderableType]]) -> None:
+def print_pages_table(
+    headers: (
+        List[RenderableType | Tuple[RenderableType, StyleType | None, int | None]]
+        | None
+    ),
+    rows: List[List[RenderableType]],
+) -> None:
     """print page tables with specific colors"""
     table = create_table("📄 Pages Overview", headers, min_width=50)
 
@@ -101,7 +119,13 @@ def print_pages_table(headers: List[RenderableType | Tuple[RenderableType, Style
     console.print()
 
 
-def print_routes_table(headers: List[RenderableType | Tuple[RenderableType, StyleType | None, int |None]] | None, rows: List[List[RenderableType]]) -> None:
+def print_routes_table(
+    headers: (
+        List[RenderableType | Tuple[RenderableType, StyleType | None, int | None]]
+        | None
+    ),
+    rows: List[List[RenderableType]],
+) -> None:
     """Print routes table with especial style"""
     table = create_table("🛣️ Routes", headers, min_width=40)
 

@@ -1,4 +1,4 @@
-from typing import Any, Dict, List
+from typing import Dict, List
 
 
 def build_context_map(scan_result: Dict[str, Dict[str, str] | List[str]]) -> str:
@@ -8,7 +8,9 @@ def build_context_map(scan_result: Dict[str, Dict[str, str] | List[str]]) -> str
 
     if "app" in scan_result:
         lines.append("Estrutura app/:")
-        lines.extend(render_tree(scan_result["app"], indent=2))
+        app = scan_result["app"]
+        if isinstance(app, Dict):
+            lines.extend(render_tree(app, indent=2))
 
     if scan_result.get("configs"):
         lines.append("\nConfigs:")

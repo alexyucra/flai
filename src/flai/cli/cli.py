@@ -1,14 +1,73 @@
-import sys
-import typer
-import click
-from flai.cli.commands.init import handle_init
-from flai.cli.commands.shell import handle_shell
+from typing import Annotated
 
-# from flai.cli.commands.init2 import handle_init
-# from flai.cli.commands.shell2 import handle_shell
+from typer import Option, Typer
+from flai.cli.commands.init import init_app
+from flai.cli.commands.info import info_app
+from flai.cli.commands.shell import shell_app
 from flai.cli.console.console import console
 from flai.cli.console import Table, Panel, box
-import traceback
+from flai.cli.utils.version import version_callback
+
+FLAI_FOOTER = """
+💡 Curtiu o Flai?\n
+Ajude a liberar novas features 🚀\n\n
+[bold yellow]Meta: 2000 inscritos[/bold yellow]\n
+👉 https://www.youtube.com/@LatinDev
+"""
+
+FLAI_HEADER = """
+🚀 [bold cyan]Flai - Framework local de IA[/bold cyan]\n\n
+Este projeto é [bold green]opensource[/bold green].\n
+Você está entre os primeiros usuários.\n
+[bold red]Mais Versões serão liberadas[/bold red].\n
+[bold yellow]somente após 1000 e 2000 inscritos.[/bold yellow].\n\n
+👉 https://www.youtube.com/@LatinDev\n
+curso fleting completo: https://youtu.be/sm3jWfd1ceU?si=8xCUIRfYGWkKym7X\n
+"""
+
+main_app = Typer(
+    name="Flai",
+    invoke_without_command=True,
+    no_args_is_help=False,
+    add_completion=True,
+    epilog=FLAI_FOOTER,
+    rich_markup_mode="rich",
+    help=FLAI_HEADER,
+)
+
+
+main_app.add_typer(info_app)
+main_app.add_typer(init_app)
+main_app.add_typer(shell_app)
+
+
+@main_app.callback()
+def main(
+    version: Annotated[
+        bool | None,
+        Option(
+            ...,
+            "--version",
+            "-v",
+            is_eager=True,
+            callback=version_callback,
+            help="Show the version and exit.",
+        ),
+    ] = None,
+) -> None:
+    """
+    🚀 [bold cyan]Flai - Framework local de IA[/bold cyan]\n\n
+    Este projeto é [bold green]opensource[/bold green].\n
+    Você está entre os primeiros usuários.\n
+    [bold red]Mais Versões serão liberadas[/bold red].\n
+    [bold yellow]somente após 1000 e 2000 inscritos.[/bold yellow].\n\n
+    👉 https://www.youtube.com/@LatinDev\n
+    curso fleting completo: https://youtu.be/sm3jWfd1ceU?si=8xCUIRfYGWkKym7X\n
+
+    """
+    show_banner()
+    print_help()
+    show_footer()
 
 
 def print_help() -> None:
@@ -91,34 +150,5 @@ def show_footer() -> None:
     )
 
 
-def main() -> None:
-    show_banner()
-    if len(sys.argv) < 2:
-        print_help()
-        return
-    args = sys.argv[1:]
-
-    if not args or args[0] in ("-h", "--help"):
-        print_help()
-        return
-
-    cmd = args[0]
-    subargs = args[1:]
-    try:
-        if cmd == "init":
-            handle_init(subargs)
-        elif cmd == "shell":
-            handle_shell()
-        else:
-            print(f"Unknown command: {cmd}")
-    except typer.Exit, click.exceptions.Exit:
-        raise
-    except Exception as e:
-        print("Error executing CLI command:", str(e))
-        traceback.print_exc()
-    finally:
-        show_footer()
-
-
 if __name__ == "__main__":
-    typer.run(main)
+    main_app()
