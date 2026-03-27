@@ -3,6 +3,8 @@ from typing import Dict, Tuple
 import psutil
 import platform
 
+from flai import translations as tt
+
 MIN_VERSION = 3.10
 MIN_RAM = 8
 OS_SUPORTED = ["Linux", "Darwin", "Windows"]
@@ -27,9 +29,9 @@ def _system_values() -> Tuple[str, float, int]:
 
 def system_checklist() -> Dict[str, bool]:
     return {
-        "Sistema suportado": _get_os() in OS_SUPORTED,
-        "RAM suficiente": _get_ram() >= MIN_RAM,
-        "Python >= 3.10": _get_version() >= MIN_VERSION,
+        tt.tr("Sistema suportado"): _get_os() in OS_SUPORTED,
+        tt.tr("RAM suficiente"): _get_ram() >= MIN_RAM,
+        tt.tr("Python >= 3.10"): _get_version() >= MIN_VERSION,
     }
 
 

@@ -1,5 +1,7 @@
 from typing import Dict, List
 
+from flai import translations as tt
+
 
 def get_laptop_models(
     system_info: Dict[str, int | str | float],
@@ -11,25 +13,27 @@ def get_laptop_models(
             "name": "DeepSeek-Coder 1.3B",
             "ollama_id": "deepseek-coder:1.3b",
             "ram": "2 GB",
-            "description": "Especialista em código, ultra leve, ideal para hardware limitado e análise de Python/Flet",
+            "description": tt.tr(
+                "Specialist in code, ultra lightweight, ideal for limited hardware and Python/Flet analysis"
+            ),
         },
         {
             "name": "Llama 3.2 3B",
             "ollama_id": "llama3.2:3b",
             "ram": "8 GB",
-            "description": "Leve, rápido, ideal para código",
+            "description": tt.tr("Light, fast, ideal for code"),
         },
         {
             "name": "Phi-3 Mini",
             "ollama_id": "phi3:mini",
             "ram": "8 GB",
-            "description": "Muito rápido, bom para análise",
+            "description": tt.tr("Very fast, good for analysis"),
         },
         {
             "name": "Code Llama 7B",
             "ollama_id": "codellama:7b",
             "ram": "16 GB",
-            "description": "Excelente para projetos grandes",
+            "description": tt.tr("Excellent for large projects"),
         },
     ]
 

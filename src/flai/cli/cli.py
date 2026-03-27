@@ -1,12 +1,13 @@
 from typing import Annotated
 
-from typer import Option, Typer
+from typer import Context, Option, Typer
 from flai.cli.commands.init import init_app
 from flai.cli.commands.info import info_app
 from flai.cli.commands.shell import shell_app
 from flai.cli.console.console import console
 from flai.cli.console import Table, Panel, box
 from flai.cli.utils.version import version_callback
+from flai import translations as tt
 
 FLAI_FOOTER = """
 💡 Curtiu o Flai?\n
@@ -33,6 +34,7 @@ main_app = Typer(
     epilog=FLAI_FOOTER,
     rich_markup_mode="rich",
     help=FLAI_HEADER,
+    context_settings={"help_option_names": ["-h", "--help"]},
 )
 
 
@@ -43,6 +45,7 @@ main_app.add_typer(shell_app)
 
 @main_app.callback()
 def main(
+    ctx: Context,
     version: Annotated[
         bool | None,
         Option(
@@ -51,9 +54,18 @@ def main(
             "-v",
             is_eager=True,
             callback=version_callback,
-            help="Show the version and exit.",
+            help=tt.tr("Show the version and exit."),
         ),
     ] = None,
+    lang: Annotated[
+        str,
+        Option(
+            ...,
+            "--lang",
+            "-l",
+            help=tt.tr("Language (leave empty to detect system language)"),
+        ),
+    ] = "en",
 ) -> None:
     """
     🚀 [bold cyan]Flai - Framework local de IA[/bold cyan]\n\n
@@ -65,6 +77,9 @@ def main(
     curso fleting completo: https://youtu.be/sm3jWfd1ceU?si=8xCUIRfYGWkKym7X\n
 
     """
+    tt.set_language(lang)
+    ctx.obj = {"lang": lang}
+
     show_banner()
     print_help()
     show_footer()
@@ -95,14 +110,14 @@ def print_help() -> None:
         padding=(0, 1),
     )
 
-    table.add_column("Command", style="bold green", width=36)
-    table.add_column("Description", style="cyan", width=44)
+    table.add_column(tt.tr("Command"), style="bold green", width=36)
+    table.add_column(tt.tr("Description"), style="cyan", width=44)
 
     # Comandos organizados por categorías
     categories = {
-        "💼 Project Commands": [
-            ("flai init ia", "Setup local AI environment"),
-            ("flai shell", "Interactive AI shell"),
+        tt.tr("💼 Project Commands"): [
+            ("flai init ia", tt.tr("Setup local AI environment")),
+            ("flai shell", tt.tr("Interactive AI shell")),
         ]
     }
 

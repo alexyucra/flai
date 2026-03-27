@@ -9,6 +9,8 @@ from flai.cli.utils.context import build_context_map
 from flai.cli.utils.ollama import run_ollama
 from flai.cli.utils.scanner import scan_project
 
+from flai import translations as tt
+
 DEFAULT_PROJECT_NAME = "app"
 
 shell_app = Typer(no_args_is_help=False)
@@ -16,29 +18,26 @@ shell_app = Typer(no_args_is_help=False)
 
 @shell_app.command(
     name="shell",
-    help="Abre o FLAI Shell e analisa o projeto Fleting",
-    short_help="Interactive AI shell",
+    help=tt.tr("Open FLAI Shell and analyze the Fleting project."),
+    short_help=tt.tr("Interactive AI shell"),
 )
 def shell_command(
     ia: Annotated[
         str | None,
         Argument(
             ...,
-            help="Specific IA to use.",
+            help=tt.tr("Specific IA to use."),
         ),
     ] = None,
 ) -> None:
-    """
-    Abre o FLAI Shell e analisa o projeto Fleting
-    """
     cwd = Path.cwd()
     project_root = cwd / DEFAULT_PROJECT_NAME
 
     if not project_root.exists():
-        console.print("[error]No Fleting projects found.[/error]")
+        console.print(f"[error]{tt.tr("No Fleting projects found.")}[/error]")
         return
 
-    console.print("[bold cyan]FLAI Shell iniciado[/bold cyan]")
+    console.print(f"[bold cyan]{tt.tr("FLAI Shell initiated")}[/bold cyan]")
 
     # 1. Scan
     scan = scan_project(project_root)
@@ -49,25 +48,26 @@ def shell_command(
     # 3. Checklist
     checklist_file = create_checklist(project_root)
 
-    console.print(f"[success]Checklist criado em {checklist_file}[/success]")
+    console.print(
+        f"[success]{tt.tr("Checklist created at")} {checklist_file}[/success]"
+    )
 
     # 4. Prompt base
     prompt = f"""
-Você é um arquiteto de software especialista em Python e Flet.
+{tt.tr("You are a software architect specialist in Python and Flet.")}
 
-Analise o seguinte projeto Fleting:
+{tt.tr("Analyze the following Fleting project:")}
 
 {context_map}
 
-Gere sugestões objetivas de melhoria,
-sem reescrever código.
+{tt.tr("Generate objective suggestions for improvement, without rewriting code.")}
 """
 
-    console.print("[info]Analisando projeto com IA...[/info]")
+    console.print(f"[info]{tt.tr("Analyzing project with AI...")}[/info]")
 
     response = run_ollama("deepseek-coder:1.3b", prompt)
 
-    console.print("\n[bold]Sugestões iniciais:[/bold]\n")
+    console.print(f"\n[bold]{tt.tr("Initial suggestions")}:[/bold]\n")
     console.print(response)
 
-    console.print("\nDigite 'exit' para sair")
+    console.print(f"\n{tt.tr("Type 'exit' to leave.")}")

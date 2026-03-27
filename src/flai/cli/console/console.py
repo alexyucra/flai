@@ -15,6 +15,7 @@ from rich.text import Text
 from rich.tree import Tree
 
 from flai.cli.console.theme import THEMES
+from flai import translations as tt
 
 console = Console(theme=THEMES)
 
@@ -114,7 +115,7 @@ def print_pages_table(
     console.print()
     console.print(table)
     console.print(
-        "[dim]Legend: [green]✔[/green] = Present | [dim red]—[/dim red] = Missing[/dim]"
+        f"[dim]{tt.tr("Legend")}: [green]✔[/green] = {tt.tr("Present")} | [dim red]—[/dim red] = {tt.tr("Missing")}[/dim]"
     )
     console.print()
 

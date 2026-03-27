@@ -1,0 +1,389 @@
+# Spanish translations for PROJECT.
+# Copyright (C) 2026 ORGANIZATION
+# This file is distributed under the same license as the PROJECT project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2026-03-27 04:28-0400\n"
+"PO-Revision-Date: 2026-03-26 19:59-0400\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: es\n"
+"Language-Team: es <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: /Users/apple/Work/Python/flai/src/flai/cli/commands/shell.py:57
+msgid "Analyze the following Fleting project:"
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/cli/commands/shell.py:75
+msgid "Analyzing project with AI..."
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/cli/commands/shell.py:51
+msgid "Checklist created at"
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/cli/commands/init.py:73
+msgid "Choose the model"
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/i18n.py:106
+msgid "Clean completed"
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/i18n.py:94
+msgid "Cleaning translation files..."
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/cli/cli.py:113
+msgid "Command"
+msgstr "Comando"
+
+#: /Users/apple/Work/Python/flai/src/flai/i18n.py:87
+msgid "Compiling binary translations..."
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/cli/utils/context.py:18
+msgid "Configs"
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/cli/cli.py:114
+msgid "Description"
+msgstr "Descripción"
+
+#: /Users/apple/Work/Python/flai/src/flai/cli/utils/ollama.py:28
+msgid "Downloading and installing silently (please wait)..."
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/i18n.py:27
+msgid "Error: 'pybabel' not found. Run 'uv add --dev Babel'"
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/cli/utils/models.py:37
+msgid "Excellent for large projects"
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/cli/commands/init.py:68
+msgid "Exit"
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/i18n.py:36
+msgid "Extracting  messages from .py files..."
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/cli/commands/shell.py:40
+msgid "FLAI Shell initiated"
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/cli/utils/ollama.py:43
+msgid "Failure in automatic installation"
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/cli/utils/version.py:10
+msgid "Flai version"
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/cli/utils/context.py:9
+msgid "Fleting Project - General Context"
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/cli/commands/init.py:36
+msgid "Fleting project not found"
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/cli/commands/shell.py:61
+msgid "Generate objective suggestions for improvement, without rewriting code."
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/cli/commands/init.py:21
+msgid "Init local AI (LangChain + Ollama) for the Fleting project."
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/cli/commands/shell.py:79
+msgid "Initial suggestions"
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/cli/commands/init.py:39
+msgid "Initializing FLAI (Local AI)"
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/i18n.py:59
+msgid "Initializing catalog for"
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/cli/utils/ollama.py:15
+msgid "Installing Ollama for"
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/cli/commands/init.py:80
+msgid "Installing model"
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/cli/cli.py:120
+#: /Users/apple/Work/Python/flai/src/flai/cli/commands/shell.py:22
+msgid "Interactive AI shell"
+msgstr "Shell de IA interactivo"
+
+#: /Users/apple/Work/Python/flai/src/flai/cli/cli.py:66
+msgid "Language (leave empty to detect system language)"
+msgstr "Idioma (deje en blanco para detectar el idioma del sistema)"
+
+#: /Users/apple/Work/Python/flai/src/flai/cli/console/console.py:118
+msgid "Legend"
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/cli/utils/models.py:25
+msgid "Light, fast, ideal for code"
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/cli/commands/init.py:86
+msgid "Local AI installed successfully!"
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/cli/commands/init.py:53
+msgid "Low RAM detected"
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/cli/commands/init.py:62
+msgid "Minimum RAM"
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/cli/console/console.py:118
+msgid "Missing"
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/cli/commands/init.py:61
+msgid "Model"
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/cli/commands/shell.py:37
+msgid "No Fleting projects found."
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/cli/utils/ollama.py:33
+msgid "Ollama installed successfully via PowerShell!"
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/cli/utils/ollama.py:11
+msgid "Ollama já instalado"
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/cli/commands/shell.py:21
+msgid "Open FLAI Shell and analyze the Fleting project."
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/cli/commands/init.py:60
+msgid "Option"
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/cli/console/console.py:118
+msgid "Present"
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/cli/utils/system.py:34
+msgid "Python >= 3.10"
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/cli/utils/system.py:33
+msgid "RAM suficiente"
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/i18n.py:118
+msgid "Rebuild completed"
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/cli/commands/init.py:58
+msgid "Recommended models for your laptop"
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/cli/cli.py:119
+#: /Users/apple/Work/Python/flai/src/flai/cli/commands/init.py:22
+msgid "Setup local AI environment"
+msgstr "Configurar el entorno local de IA"
+
+#: /Users/apple/Work/Python/flai/src/flai/cli/commands/info.py:8
+msgid "Show system information."
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/cli/cli.py:57
+msgid "Show the version and exit."
+msgstr "Mostrar la versión y salir"
+
+#: /Users/apple/Work/Python/flai/src/flai/cli/utils/system.py:32
+msgid "Sistema suportado"
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/cli/utils/models.py:17
+msgid ""
+"Specialist in code, ultra lightweight, ideal for limited hardware and "
+"Python/Flet analysis"
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/cli/commands/init.py:29
+msgid "Specific IA to init."
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/cli/commands/shell.py:29
+msgid "Specific IA to use."
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/cli/utils/context.py:12
+msgid "Structure app/:"
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/cli/commands/init.py:46
+msgid "System checklist"
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/i18n.py:12
+msgid "Tool for managing translations with Babel."
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/cli/utils/ollama.py:47
+msgid "Try installing manually at:"
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/cli/commands/init.py:68
+msgid "Type '0' to exit"
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/cli/commands/shell.py:82
+msgid "Type 'exit' to leave."
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/i18n.py:78
+msgid "Updating existing translation files..."
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/cli/commands/init.py:63
+msgid "Usage"
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/cli/utils/models.py:31
+msgid "Very fast, good for analysis"
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/cli/commands/shell.py:55
+msgid "You are a software architect specialist in Python and Flet."
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/i18n.py:106
+msgid "files .mo deleted."
+msgstr ""
+
+#: /Users/apple/Work/Python/flai/src/flai/cli/cli.py:118
+msgid "💼 Project Commands"
+msgstr "💼 Comandos del proyecto"
+
+#~ msgid "Hello, Default!"
+#~ msgstr "Hola, Default!"
+
+#~ msgid "Abre o FLAI Shell e analisa o projeto Fleting"
+#~ msgstr ""
+
+#~ msgid "Analisando projeto com IA..."
+#~ msgstr ""
+
+#~ msgid "Baixando e instalando silenciosamente (aguarde)..."
+#~ msgstr ""
+
+#~ msgid "Checklist criado em"
+#~ msgstr ""
+
+#~ msgid "Checklist do sistema"
+#~ msgstr ""
+
+#~ msgid "Digite '0' para sair"
+#~ msgstr ""
+
+#~ msgid "Digite 'exit' para sair"
+#~ msgstr ""
+
+#~ msgid "Escolha o modelo"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "Especialista em código, ultra leve, "
+#~ "ideal para hardware limitado e análise"
+#~ " de Python/Flet"
+#~ msgstr ""
+
+#~ msgid "Estrutura app/:"
+#~ msgstr ""
+
+#~ msgid "Excelente para projetos grandes"
+#~ msgstr ""
+
+#~ msgid "Exit/Sair"
+#~ msgstr ""
+
+#~ msgid "FLAI Shell iniciado"
+#~ msgstr ""
+
+#~ msgid "Falha en la instalación automática"
+#~ msgstr ""
+
+#~ msgid "IA local instalada com sucesso!"
+#~ msgstr ""
+
+#~ msgid "Inicializa IA local (LangChain + Ollama) para o projeto Fleting"
+#~ msgstr ""
+
+#~ msgid "Inicializando FLAI (IA Local)"
+#~ msgstr ""
+
+#~ msgid "Instalando Ollama para"
+#~ msgstr ""
+
+#~ msgid "Instalando modelo"
+#~ msgstr ""
+
+#~ msgid "Intente instalar manualmente em:"
+#~ msgstr ""
+
+#~ msgid "Leve, rápido, ideal para código"
+#~ msgstr ""
+
+#~ msgid "Modelo"
+#~ msgstr ""
+
+#~ msgid "Modelos recomendados para seu laptop"
+#~ msgstr ""
+
+#~ msgid "Muito rápido, bom para análise"
+#~ msgstr ""
+
+#~ msgid "Ollama instalado com sucesso via PowerShell!"
+#~ msgstr ""
+
+#~ msgid "Opção"
+#~ msgstr ""
+
+#~ msgid "Pouca RAM detectada"
+#~ msgstr ""
+
+#~ msgid "Projeto Fleting - Contexto Geral"
+#~ msgstr ""
+
+#~ msgid "Projeto Fleting não encontrado"
+#~ msgstr ""
+
+#~ msgid "RAM mínima"
+#~ msgstr ""
+
+#~ msgid "Sugestões iniciais"
+#~ msgstr ""
+
+#~ msgid "System Info!"
+#~ msgstr ""
+
+#~ msgid "Uso"
+#~ msgstr ""
+

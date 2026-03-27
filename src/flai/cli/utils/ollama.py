@@ -3,14 +3,16 @@ import subprocess
 import platform
 from flai.cli.console.console import console
 
+from flai import translations as tt
+
 
 def install_ollama() -> None:
     if shutil.which("ollama"):
-        console.print("[info]Ollama já instalado[/info]")
+        console.print(f"[info]{tt.tr("Ollama already installed")}[/info]")
         return
 
     os_type = platform.system()
-    console.print(f"[info]Instalando Ollama para {os_type}...[/info]")
+    console.print(f"[info]{tt.tr("Installing Ollama for")} {os_type}...[/info]")
 
     try:
         if os_type == "Windows":
@@ -23,12 +25,12 @@ def install_ollama() -> None:
             )
 
             console.print(
-                "[info]Baixando e instalando silenciosamente (aguarde)...[/info]"
+                f"[info]{tt.tr("Downloading and installing silently (please wait)...")}[/info]"
             )
 
             subprocess.run(["powershell", "-Command", ps_command], check=True)
             console.print(
-                "[success]Ollama instalado com sucesso via PowerShell![/success]"
+                f"[success]{tt.tr("Ollama installed successfully via PowerShell!")}[/success]"
             )
 
         elif os_type in ["Linux", "Darwin"]:
@@ -37,9 +39,11 @@ def install_ollama() -> None:
             )
 
     except subprocess.CalledProcessError as e:
-        console.print(f"[error]Falha en la instalación automática: {e}[/error]")
         console.print(
-            "[yellow]Intente instalar manualmente em: https://ollama.com[/yellow]"
+            f"[error]{tt.tr("Failure in automatic installation")}: {e}[/error]"
+        )
+        console.print(
+            f"[yellow]{tt.tr("Try installing manually at:")} https://ollama.com[/yellow]"
         )
         raise
 
