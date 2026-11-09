@@ -1,0 +1,36 @@
+# flai/cli/helper/optimize_model.ps1
+param (
+    [string]$BaseModel = "deepseek-coder:1.3b",
+    [string]$CustomName = "flai-coder"
+)
+
+Write-Host "--- OTIMIZANDO MODELO: $BaseModel -> $CustomName ---" -ForegroundColor Cyan
+
+# 1. Definir o caminho do Modelfile
+$modelfilePath = "$env:TEMP\flai-coder.Modelfile"
+
+# 2. Criar o conteúdo do Modelfile
+# Removidos parâmetros problemáticos como num_threads que devem ser via CLI/Env
+$modelfileContent = @"
+FROM $BaseModel
+PARAMETER num_ctx 1024
+PARAMETER num_batch 128
+PARAMETER num_predict 256
+PARAMETER temperature 0.8
+PARAMETER repeat_penalty 1.1
+"@
+
+# 3. Salvar o arquivo de forma limpa (Encoding ASCII evita problemas de leitura no Ollama)
+Set-Content -Path $modelfilePath -Value $modelfileContent -Encoding Ascii
+
+# 4. Criar o modelo no Ollama
+Write-Host "Gerando versao otimizada no Ollama..." -ForegroundColor Yellow
+ollama create $CustomName -f $modelfilePath
+
+if ($LASTEXITCODE -eq 0) {
+    Write-Host "SUCESSO: Modelo $CustomName criado!" -ForegroundColor Green
+    exit 0
+} else {
+    Write-Host "ERRO: O Ollama nao conseguiu processar o Modelfile." -ForegroundColor Red
+    exit 1
+}

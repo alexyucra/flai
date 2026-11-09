@@ -1,13 +1,20 @@
 import sys
 import typer
+from typing import Optional
 import click
+import json
+from pathlib import Path
 from flai.cli.commands.init import handle_init
-from flai.cli.commands.shell import handle_shell
-# from flai.cli.commands.init2 import handle_init
-# from flai.cli.commands.shell2 import handle_shell
+from flai.source.shell import handle_shell
 from flai.cli.console.console import console
 from flai.cli.console import Table, Panel, Text, box, Rule
 import traceback
+from flai.core.logging import setup_logging, get_logger
+
+setup_logging(log_level="INFO", log_file=Path.home() / "flai" / "logs" / "flai.log")
+logger = get_logger(__name__)
+
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 def print_help():
     console.clear()
@@ -39,7 +46,40 @@ def print_help():
     categories = {
         "💼 Project Commands": [
             ("flai init ia", "Setup local AI environment"),
-            ("flai shell", "Interactive AI shell")
+            ("flai shell", "Start interactive AI shell"),
+            ("flai history", "Show conversation history")
+        ],
+
+        "📚 Knowledge & Context": [
+            ("flai context list", "List registered contexts"),
+            ("flai context add", "Add knowledge context"),
+            ("flai context search", "Search context"),
+            ("flai context index", "Index context into RAG")
+        ],
+
+        "🧠 RAG Commands": [
+            ("flai rag index", "Build semantic index"),
+            ("flai rag search", "Semantic search"),
+            ("flai rag stats", "Show RAG statistics"),
+            ("flai rag clear", "Clear vector database")
+        ],
+
+        "🤖 Agent Commands": [
+            ("flai agent list", "List agents"),
+            ("flai agent create", "Create custom agent"),
+            ("flai agent stats", "Show agent statistics")
+        ],
+
+        "🎯 Intent Commands": [
+            ("flai intent list", "List supported intents")
+        ],
+
+        "⚙️ Config Commands": [
+            ("flai config show", "Show configuration"),
+            ("flai config set", "Set configuration value"),
+            ("flai config unset", "Remove configuration value"),
+            ("flai config edit", "Edit configuration"),
+            ("flai config init", "Initialize configuration")
         ]
     }
     
@@ -88,33 +128,141 @@ def show_footer():
         )
     )
 
-def main():
-    show_banner()
-    if len(sys.argv) < 2:
-        print_help()
-        return
-    args = sys.argv[1:]
+@click.group(context_settings=CONTEXT_SETTINGS)
+@click.version_option(version='0.1.0', prog_name='flai')
+@click.pass_context
+def cli(ctx):
+    """
+    Flai - Local AI Framework for Python project analysis and development
+    
+    \b
+    Main commands:
+    - init ia : Initialize AI environment
+    - shell   : Interactive AI shell
+    - chat    : Interactive chat about projects
+    - analyze : Analyze Python/Flet projects
+    """
+    # Store context for child commands
+    ctx.ensure_object(dict)
+    
+    # Show banner only if not help command
+    # if not any(arg in sys.argv for arg in ['--help', '-h', 'help']):
+    #     show_banner()
 
-    if not args or args[0] in ("-h", "--help"):
-        print_help()
-        return
+@cli.command() # init
+@click.argument('model', default='flai-ai')
+@click.option('--path', '-p', default='.', help='Project path')
+@click.option('--verbose', '-v', is_flag=True, help='Verbose mode')
+def init(model: str, path: str, verbose: bool):
+    """Inicializar Flai con modelo AI para análisis"""
+    handle_init(model, path, verbose)
 
-    cmd = args[0]
-    subargs = args[1:]
-    try:
-        if cmd == "init":
-            handle_init(subargs)
-        elif cmd == "shell":
-            handle_shell()
+@cli.command() # shell
+@click.option('--project', '-p', default='.', help='Reference project')
+@click.option('--model', '-m', default=None, help='AI model for chat')
+@click.option('--session', '-s', help='Session name for history')
+def shell(project: str, model: Optional[str], session: Optional[str]):
+    """Iniciar REPL com IA (RAG + Histórico)"""
+    from flai.cli.commands.shell_unified import handle_shell_unified
+    handle_shell_unified(project, model, session)
+
+@cli.command() # rag commands
+@click.argument('action', type=click.Choice(['index', 'search', 'stats', 'clear']))
+@click.option('--query', '-q', help='Search query (for search action)')
+@click.option('--project', '-p', default='.', help='Project path')
+def rag(action: str, query: Optional[str], project: str):
+    """Gerenciar RAG (busca semântica no código)"""
+    from flai.core.rag.integrated_rag import IntegratedRAG
+    from flai.core.project import get_project_root
+    
+    project_path = Path(project).resolve()
+    root = get_project_root() or project_path
+    
+    rag = IntegratedRAG(root, auto_index=False)
+    
+    if action == 'index':
+        click.echo("📚 Indexando projeto...")
+        if rag.rag.index_project(verbose=True):
+            click.echo("✅ Indexação concluída!")
         else:
-            print(f"Unknown command: {cmd}")
-    except (typer.Exit, click.exceptions.Exit):
-        raise
+            click.echo("❌ Falha na indexação. LangChain instalado?")
+    
+    elif action == 'search':
+        if not query:
+            click.echo("❌ Use --query para buscar")
+            return
+        click.echo(f"🔍 Buscando: {query}")
+        results = rag.search(query)
+        for i, r in enumerate(results, 1):
+            click.echo(f"\n{i}. {Path(r['source']).name}")
+            click.echo(f"   Score: {(1 - r['score']):.2%}")
+            click.echo(f"   {r['content'][:200]}...")
+    
+    elif action == 'stats':
+        stats = rag.get_stats()
+        click.echo(json.dumps(stats, indent=2))
+    
+    elif action == 'clear':
+        if rag.rag.clear_index(verbose=True):
+            click.echo("✅ Índice limpo")
+
+@cli.command() # history commands
+@click.option('--project', '-p', default='.', help='Project path')
+@click.option('--session', '-s', help='Session name')
+@click.option('--export', '-e', help='Export to file')
+def history(project: str, session: Optional[str], export: Optional[str]):
+    """Gerenciar histórico de conversas"""
+    from flai.cli.repl_unified import ConversationHistory
+    from flai.core.project import get_project_root
+    
+    project_path = Path(project).resolve()
+    root = get_project_root() or project_path
+    
+    if export:
+        hist = ConversationHistory(root, session)
+        output = Path(export)
+        exported = hist.export_to_markdown(output)
+        click.echo(f"✅ Histórico exportado para: {exported}")
+    else:
+        # Lista sessões disponíveis
+        sessions_dir = root / ".flai" / "sessions"
+        if sessions_dir.exists():
+            sessions = list(sessions_dir.glob("session_*.md"))
+            if sessions:
+                click.echo("📜 Sessões disponíveis:")
+                for s in sessions:
+                    size = s.stat().st_size
+                    click.echo(f"  • {s.name} ({size} bytes)")
+            else:
+                click.echo("ℹ️ Nenhuma sessão encontrada")
+        else:
+            click.echo("ℹ️ Nenhuma sessão encontrada")
+
+@cli.command()
+def config():
+    """Abre o painel de configuração web"""
+    from flai.cli.commands.config import web_start
+    web_start()
+
+def main():
+
+    try:
+        if len(sys.argv) == 1 or sys.argv[1] in ('-h', '--help', 'help'):
+            print_help()
+            return
+        
+        cli()
+        
+    except click.Abort:
+        logger.info("Comando abortado pelo usuário")
+        sys.exit(1)
     except Exception as e:
-         print("Error executing CLI command:", str(e))
-         traceback.print_exc() 
-    finally:
-        show_footer()
+        logger.error(f"Erro inesperado: {str(e)}", exc_info=True)
+        console.print(f"[bold red]Unexpected error: {str(e)}[/bold red]")
+        traceback.print_exc()
+        sys.exit(1)
+    # finally:
+        # show_footer()
 
 if __name__ == "__main__":
     main()

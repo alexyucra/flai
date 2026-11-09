@@ -1,12 +1,22 @@
 # flai/cli/__init__.py
-"""
-FLAI - Framework Local de AI
-"""
+"""CLI do FLAI"""
 
-__version__ = "1.0.0"
-__author__ = "Alex Yucra"
+import sys
+from pathlib import Path
 
-# Exportar funções principais
-# from flai.cli.utils2.ollama_manager import run_ollama, get_ollama_manager
+def setup_cli_logging(verbose: bool = False):
+    """Configura logging para CLI"""
+    from flai.core.logging import setup_logging
+    
+    log_level = "DEBUG" if verbose else "INFO"
+    log_file = Path.home() / ".flai" / "logs" / "flai.log"
+    
+    setup_logging(
+        log_level=log_level,
+        log_file=log_file,
+        console_output=True
+    )
 
-# __all__ = ['run_ollama', 'get_ollama_manager']
+# Auto-configuração (opcional)
+setup_cli_logging()
+

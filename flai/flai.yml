@@ -1,0 +1,13 @@
+ia:
+  enabled: true
+  provider: groq
+  model: llama3-8b-8192
+  temperature: 0.2
+  max_tokens: 800
+
+limits:
+  session_tokens: 3000
+  daily_tokens: 5000
+  warn_at_percent: 80
+
+mode: beginner

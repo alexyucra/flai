@@ -11,7 +11,7 @@ from rich.markdown import Markdown
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.prompt import Prompt, Confirm
 from rich.tree import Tree
-from fleting.cli.console.themes import THEMES
+from flai.cli.console.themes import THEMES
 
 console = Console(theme=THEMES)
 
