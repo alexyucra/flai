@@ -1,135 +1,125 @@
 # flai/cli/commands/context.py
 """
-Comandos para gerenciar múltiplos contextos
+flai context: gerencia as documentações (fontes de contexto) do projeto.
+As mesmas operações estão no painel web: flai config → Contextos.
 """
-import typer
 from pathlib import Path
-from typing import Optional, List
+from typing import Optional
 
-from flai.core.context.context_manager import ContextManager
-from flai.cli.console.console import console
+import typer
 from rich.table import Table
 
-app = typer.Typer(help="Gerenciar contextos de conhecimento do FLAI")
+from flai.cli.console.console import console
+from flai.core.context.context_manager import ContextManager
+from flai.core.project import find_project_root
+
+app = typer.Typer(help="Gerenciar documentações (contextos) usadas pela IA")
+
+
+def _manager() -> ContextManager:
+    root = find_project_root() or Path.cwd()
+    return ContextManager(root)
+
 
 @app.command("list")
 def list_contexts():
-    """Lista todas as fontes de contexto configuradas"""
-    manager = ContextManager(Path.cwd())
-    contexts = manager.list_contexts()
-    
-    if not contexts:
-        console.print("[yellow]ℹ️ Nenhum contexto configurado[/yellow]")
-        return
-    
-    table = Table(title="📚 Contextos Disponíveis")
-    table.add_column("ID", style="cyan")
-    table.add_column("Nome", style="green")
-    table.add_column("Tipo", style="yellow")
-    table.add_column("Status", style="white")
-    table.add_column("RAG", style="dim")
-    
-    for ctx in contexts:
-        status = "✅" if ctx["enabled"] else "❌"
-        rag_status = "🔍" if ctx["rag_indexed"] else "⏳"
-        
-        table.add_row(
-            ctx["id"],
-            ctx["name"][:30],
-            ctx["type"],
-            status,
-            rag_status
-        )
-    
+    """Lista as documentações cadastradas."""
+    contexts = _manager().list_contexts()
+    table = Table(title="📚 Documentações")
+    for col, style in (("ID", "cyan"), ("Nome", "green"), ("Tipo", "yellow"), ("Prior.", "white"),
+                       ("Versão", "magenta"), ("Ativa", "white"), ("Índice", "dim")):
+        table.add_column(col, style=style)
+    for c in contexts:
+        table.add_row(c["id"], c["name"][:34], c["type"], str(c["priority"]),
+                      c.get("ref") or c.get("fetched_ref") or "-",
+                      "✅" if c["enabled"] else "❌",
+                      f"🔍 {c.get('rag_chunks', 0)} chunks" if c["rag_indexed"] else "⏳ não indexado")
     console.print(table)
+
 
 @app.command("add")
 def add_context(
-    source_id: str = typer.Argument(..., help="ID único do contexto"),
-    name: str = typer.Option(..., "--name", "-n", help="Nome do contexto"),
-    description: str = typer.Option(..., "--description", "-d", help="Descrição"),
-    type: str = typer.Option(..., "--type", "-t", help="Tipo: local_file, git_repo, url, project_code"),
-    location: str = typer.Option(..., "--location", "-l", help="Localização (arquivo, URL, ou repo git)")
+    source_id: str = typer.Argument(..., help="ID (letras, números, _ ou -)"),
+    name: str = typer.Option(..., "--name", "-n"),
+    type: str = typer.Option(..., "--type", "-t", help="local_file | git_repo | url"),
+    location: str = typer.Option(..., "--location", "-l", help="Arquivo/pasta, URL https ou repositório git"),
+    description: str = typer.Option("", "--description", "-d"),
+    ref: Optional[str] = typer.Option(None, "--ref", help="git: tag ou branch (ex.: v1.0.5)"),
+    paths: Optional[str] = typer.Option(None, "--paths", help="git: subpastas separadas por vírgula"),
+    priority: int = typer.Option(2, "--priority", "-p", help="1 = mais importante"),
+    index: bool = typer.Option(False, "--index", help="Baixar e indexar em seguida"),
 ):
-    """Adiciona uma nova fonte de contexto"""
-    manager = ContextManager(Path.cwd())
-    
-    if manager.add_context(source_id, name, description, type, location):
-        console.print(f"[green]✅ Contexto '{name}' adicionado![/green]")
-        
-        # Pergunta se quer indexar
-        if typer.confirm("Deseja indexar este contexto para busca semântica?"):
-            manager.index_context(source_id, verbose=True)
-    else:
-        console.print(f"[red]❌ Erro ao adicionar contexto[/red]")
+    """Cadastra uma documentação."""
+    m = _manager()
+    if not m.add_context(source_id, name, description or name, type, location,
+                         ref=ref, paths=paths, priority=priority):
+        console.print(f"[red]❌ {m.last_error}[/red]")
+        raise typer.Exit(1)
+    console.print(f"[green]✅ '{name}' cadastrada[/green]")
+    if index:
+        index_context(source_id)
+
 
 @app.command("remove")
-def remove_context(
-    source_id: str = typer.Argument(..., help="ID do contexto a remover")
-):
-    """Remove uma fonte de contexto"""
-    manager = ContextManager(Path.cwd())
-    
-    if typer.confirm(f"Remover contexto '{source_id}'?"):
-        if manager.remove_context(source_id):
-            console.print(f"[green]✅ Contexto '{source_id}' removido[/green]")
-        else:
-            console.print(f"[red]❌ Contexto não encontrado[/red]")
+def remove_context(source_id: str = typer.Argument(...)):
+    """Remove uma documentação e o seu índice."""
+    if typer.confirm(f"Remover '{source_id}'?"):
+        ok = _manager().remove_context(source_id)
+        console.print("[green]✅ Removida[/green]" if ok else "[red]❌ Não encontrada (ou é o código do projeto)[/red]")
+
+
+@app.command("enable")
+def enable(source_id: str):
+    """Ativa uma documentação nas respostas da IA."""
+    console.print("✅" if _manager().set_enabled(source_id, True) else "❌ não encontrada")
+
+
+@app.command("disable")
+def disable(source_id: str):
+    """Desativa uma documentação (o índice é mantido)."""
+    console.print("✅" if _manager().set_enabled(source_id, False) else "❌ não encontrada")
+
 
 @app.command("update")
-def update_contexts(
-    source_id: Optional[str] = typer.Option(None, "--source", "-s", help="ID específico para atualizar"),
-    all: bool = typer.Option(False, "--all", "-a", help="Atualizar todos os contextos")
-):
-    """Atualiza o conteúdo das fontes de contexto"""
-    manager = ContextManager(Path.cwd())
-    
-    if source_id:
-        if manager.update_context(source_id, force=True):
-            console.print(f"[green]✅ Contexto '{source_id}' atualizado[/green]")
-        else:
-            console.print(f"[red]❌ Erro ao atualizar '{source_id}'[/red]")
-    elif all:
-        for source_id in manager.sources:
-            if manager.update_context(source_id, force=True):
-                console.print(f"[green]✅ {source_id} atualizado[/green]")
-    else:
-        console.print("[yellow]Use --source ou --all[/yellow]")
+def update_contexts(source_id: Optional[str] = typer.Argument(None),
+                    force: bool = typer.Option(False, "--force", "-f")):
+    """Baixa novamente o conteúdo (git/url)."""
+    m = _manager()
+    for sid in ([source_id] if source_id else list(m.sources)):
+        ok = m.update_context(sid, force=force)
+        console.print(f"{'✅' if ok else '❌'} {sid}" + ("" if ok else f": {m.last_error}"))
+
 
 @app.command("index")
-def index_context(
-    source_id: str = typer.Argument(..., help="ID do contexto a indexar"),
-    force: bool = typer.Option(False, "--force", "-f", help="Forçar reindexação")
-):
-    """Indexa um contexto para busca semântica (RAG)"""
-    manager = ContextManager(Path.cwd())
-    
-    console.print(f"[dim]📚 Indexando '{source_id}' para busca semântica...[/dim]")
-    
-    if manager.index_context(source_id, verbose=True):
-        console.print(f"[green]✅ Contexto '{source_id}' indexado![/green]")
+def index_context(source_id: str = typer.Argument(..., help="ID da documentação")):
+    """Baixa (se preciso) e indexa para a busca da IA."""
+    m = _manager()
+    console.print(f"[dim]📚 Indexando '{source_id}' (pode levar alguns minutos)...[/dim]")
+    if m.index_context(source_id, verbose=True):
+        console.print(f"[green]✅ '{source_id}' indexada: {m.sources[source_id].rag_chunks} chunks[/green]")
     else:
-        console.print(f"[red]❌ Erro ao indexar '{source_id}'[/red]")
+        console.print(f"[red]❌ {m.last_error}[/red]")
+        raise typer.Exit(1)
+
+
+@app.command("check")
+def check_versions():
+    """Verifica se as documentações correspondem às versões instaladas (Flet, Fleting)."""
+    drifts = _manager().check_versions()
+    if not drifts:
+        console.print("[green]✅ Documentações nas versões instaladas[/green]")
+    for d in drifts:
+        console.print(f"[yellow]⚠️ {d['id']}: {d['from']} → {d['to']}. Rode: flai context index {d['id']}[/yellow]")
+
 
 @app.command("search")
-def search_contexts(
-    query: str = typer.Argument(..., help="Consulta de busca"),
-    source: Optional[str] = typer.Option(None, "--source", "-s", help="Buscar apenas nesta fonte")
-):
-    """Busca semanticamente nos contextos indexados"""
-    manager = ContextManager(Path.cwd())
-    
-    sources = [source] if source else None
-    results = manager.search_contexts(query, sources, k=5)
-    
+def search_contexts(query: str = typer.Argument(...),
+                    source: Optional[str] = typer.Option(None, "--source", "-s")):
+    """Busca nas documentações indexadas."""
+    results = _manager().search_contexts(query, [source] if source else None, k=3)
     if not results:
-        console.print("[yellow]ℹ️ Nenhum resultado encontrado[/yellow]")
-        return
-    
-    console.print(f"[bold green]🔍 Resultados para: '{query}'[/bold green]\n")
-    
-    for i, result in enumerate(results, 1):
-        console.print(f"[bold cyan]{i}. Fonte: {result['source_name']}[/bold cyan]")
-        console.print(f"   Score: {result.get('score', 0):.2%}")
-        console.print(f"   {result['content'][:300]}...")
-        console.print("")
+        console.print("[yellow]ℹ️ Nenhum resultado (as documentações estão indexadas?)[/yellow]")
+    for i, r in enumerate(results[:8], 1):
+        console.print(f"[bold cyan]{i}. {r['source_name']} › {r['source']}[/bold cyan] "
+                      f"[dim]({r.get('similarity', 0):.0%})[/dim]")
+        console.print(f"   {r['content'][:240].strip()}...\n")

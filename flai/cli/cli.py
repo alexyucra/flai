@@ -238,10 +238,23 @@ def history(project: str, session: Optional[str], export: Optional[str]):
             click.echo("ℹ️ Nenhuma sessão encontrada")
 
 @cli.command()
-def config():
-    """Abre o painel de configuração web"""
+@click.option('--port', default=8080, help='Porta do painel')
+@click.option('--no-browser', is_flag=True, help='Não abrir o navegador')
+def config(port: int, no_browser: bool):
+    """Abre o painel de configuração web (agentes, intenções, documentações, RAG)"""
     from flai.cli.commands.config import web_start
-    web_start()
+    web_start(port=port, no_browser=no_browser)
+
+
+# flai context ...: documentações gerenciadas (mesmas operações do painel web)
+@cli.command(context_settings={"ignore_unknown_options": True, "allow_extra_args": True,
+                                "help_option_names": []})
+@click.pass_context
+def context(ctx):
+    """Documentações usadas pela IA: list | add | index | search | check | enable | disable | remove"""
+    # O Typer atual embute o próprio Click; delegamos os argumentos ao app Typer.
+    from flai.cli.commands.context import app as context_app
+    context_app(args=ctx.args or ["--help"], prog_name="flai context")
 
 def main():
 

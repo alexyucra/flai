@@ -52,7 +52,7 @@ class FLAIWebServer:
         if open_browser:
             webbrowser.open(url)
 
-        ft.app(target=self.main, host=self.host, port=self.port, view=ft.AppView.WEB_BROWSER)
+        ft.run(self.main, host=self.host, port=self.port, view=ft.AppView.WEB_BROWSER)
     
     def main(self, page: ft.Page):
         """Página principal do aplicativo"""
@@ -63,10 +63,6 @@ class FLAIWebServer:
         page.spacing = 0
         
         # Configurações da página
-        page.window_width = 1200
-        page.window_height = 800
-        page.window_min_width = 800
-        page.window_min_height = 600
         
         # Layout principal
         self.setup_layout()
@@ -115,7 +111,7 @@ class FLAIWebServer:
         for item in nav_items:
             btn = ft.Container(
                 content=ft.Text(item["label"], size=14),
-                padding=ft.padding.symmetric(horizontal=16, vertical=12),
+                padding=ft.Padding.symmetric(horizontal=16, vertical=12),
                 border_radius=8,
                 ink=True,
                 on_click=lambda e, p=item["page"]: self.navigate_to(p)
@@ -243,9 +239,9 @@ class FLAIWebServer:
             )
         )
     
-    def create_action_button(self, text: str, page: str) -> ft.ElevatedButton:
+    def create_action_button(self, text: str, page: str) -> ft.Button:
         """Cria um botão de ação rápida"""
-        return ft.ElevatedButton(
+        return ft.Button(
             content=ft.Text(text),
             on_click=lambda e: self.navigate_to(page)
         )
@@ -258,7 +254,7 @@ class FLAIWebServer:
         header = ft.Row([
             ft.Text("🤖 Agentes", size=30, weight=ft.FontWeight.BOLD),
             ft.Container(expand=True),
-            ft.ElevatedButton(
+            ft.Button(
                 "➕ Novo Agente",
                 on_click=self.show_create_agent_dialog
             )
@@ -283,7 +279,7 @@ class FLAIWebServer:
                 content=ft.Text("Ativo" if agent.enabled else "Inativo", size=12),
                 bgcolor=ft.Colors.GREEN if agent.enabled else ft.Colors.GREY,
                 border_radius=12,
-                padding=ft.padding.symmetric(horizontal=12, vertical=4)
+                padding=ft.Padding.symmetric(horizontal=12, vertical=4)
             )
             
             # Botões de ação (usando TextButton em vez de IconButton)
@@ -345,21 +341,18 @@ class FLAIWebServer:
                 else:
                     self.show_snackbar("Erro ao criar agente", is_error=True)
             
-            dialog.open = False
-            self.page.update()
+            self.page.pop_dialog()
         
         dialog = ft.AlertDialog(
             title=ft.Text("Criar Novo Agente"),
             content=ft.Column([name_field, type_dropdown, triggers_field], width=350, height=200),
             actions=[
-                ft.TextButton("Cancelar", on_click=lambda e: setattr(dialog, 'open', False)),
-                ft.ElevatedButton("Criar", on_click=on_create)
+                ft.TextButton("Cancelar", on_click=lambda e: self.page.pop_dialog()),
+                ft.Button("Criar", on_click=on_create)
             ]
         )
         
-        self.page.dialog = dialog
-        dialog.open = True
-        self.page.update()
+        self.page.show_dialog(dialog)
     
     def show_intents_page(self):
         """Página de gerenciamento de intenções"""
@@ -368,11 +361,11 @@ class FLAIWebServer:
         header = ft.Row([
             ft.Text("🎯 Intenções", size=30, weight=ft.FontWeight.BOLD),
             ft.Container(expand=True),
-            ft.ElevatedButton(
+            ft.Button(
                 "➕ Nova Intenção",
                 on_click=self.show_create_intent_dialog
             ),
-            ft.ElevatedButton(
+            ft.Button(
                 "🧪 Testar Intenção",
                 on_click=self.show_test_intent_dialog
             )
@@ -441,22 +434,19 @@ class FLAIWebServer:
                 else:
                     self.show_snackbar("Erro ao criar intenção", is_error=True)
             
-            dialog.open = False
-            self.page.update()
+            self.page.pop_dialog()
         
         dialog = ft.AlertDialog(
             title=ft.Text("Criar Nova Intenção"),
             content=ft.Column([name_field, desc_field, patterns_field, keywords_field], 
                             width=400, height=450, scroll=ft.ScrollMode.AUTO),
             actions=[
-                ft.TextButton("Cancelar", on_click=lambda e: setattr(dialog, 'open', False)),
-                ft.ElevatedButton("Criar", on_click=on_create)
+                ft.TextButton("Cancelar", on_click=lambda e: self.page.pop_dialog()),
+                ft.Button("Criar", on_click=on_create)
             ]
         )
         
-        self.page.dialog = dialog
-        dialog.open = True
-        self.page.update()
+        self.page.show_dialog(dialog)
     
     def show_test_intent_dialog(self, e):
         """Diálogo para testar intenções"""
@@ -481,108 +471,163 @@ Campos: {', '.join(fields) if fields else 'Nenhum'}
             title=ft.Text("Testar Intenção"),
             content=ft.Column([text_field, result_field], width=450, height=300),
             actions=[
-                ft.TextButton("Fechar", on_click=lambda e: setattr(dialog, 'open', False)),
-                ft.ElevatedButton("Testar", on_click=on_test)
+                ft.TextButton("Fechar", on_click=lambda e: self.page.pop_dialog()),
+                ft.Button("Testar", on_click=on_test)
             ]
         )
         
-        self.page.dialog = dialog
-        dialog.open = True
-        self.page.update()
+        self.page.show_dialog(dialog)
     
+    # ------------------------------------------------------------------
+    # Documentações (ContextManager)
+    # ------------------------------------------------------------------
+    TYPE_LABELS = {"project_code": "Código do projeto", "local_file": "Arquivo/pasta local",
+                   "git_repo": "Repositório Git", "url": "Página (URL)"}
+
     def show_contexts_page(self):
-        """Página de gerenciamento de contextos"""
-        contexts = self.context_manager.list_contexts()
-        
+        """Documentações usadas pela IA: cadastrar, editar, baixar, indexar e ativar."""
+        cm = self.context_manager
+        contexts = cm.list_contexts()
+
         header = ft.Row([
-            ft.Text("📚 Contextos", size=30, weight=ft.FontWeight.BOLD),
+            ft.Text("📚 Documentações", size=30, weight=ft.FontWeight.BOLD),
             ft.Container(expand=True),
-            ft.ElevatedButton(
-                "➕ Adicionar Contexto",
-                on_click=self.show_add_context_dialog
-            )
+            ft.Button("🔄 Verificar versões", on_click=self.check_context_versions),
+            ft.Button("➕ Adicionar", on_click=lambda e: self.show_context_dialog(None)),
         ])
-        
-        # Lista de contextos
-        context_list = ft.ListView(expand=True, spacing=10)
-        
+        hint = ft.Text(
+            "A IA consulta as documentações ativas e indexadas, em ordem de prioridade "
+            "(1 = mais importante), dentro do limite de tokens.",
+            size=12, color=ft.Colors.GREY_400)
+
+        items = ft.ListView(expand=True, spacing=10)
         for ctx in contexts:
-            item = ft.Card(
-                content=ft.Container(
-                    content=ft.Row([
-                        ft.Column([
-                            ft.Text(ctx['name'], size=16, weight=ft.FontWeight.BOLD),
-                            ft.Text(ctx['description'], size=12, color=ft.Colors.GREY_400),
-                            ft.Row([
-                                ft.Text(f"Tipo: {ctx['type']}", size=11),
-                                ft.Text(f"Local: {ctx['location'][:50]}", size=11)
-                            ], spacing=10)
-                        ], expand=True),
-                        ft.Column([
-                            ft.TextButton("Atualizar", on_click=lambda e, id=ctx['id']: self.update_context(id)),
-                            ft.TextButton("Indexar", on_click=lambda e, id=ctx['id']: self.index_context(id)),
-                            ft.TextButton("Remover", on_click=lambda e, id=ctx['id']: self.delete_context(id))
-                        ], alignment=ft.MainAxisAlignment.CENTER)
-                    ]),
-                    padding=12
-                )
-            )
-            context_list.controls.append(item)
-        
-        self.content_area.content.controls = [header, context_list]
-    
-    def show_add_context_dialog(self, e):
-        """Diálogo para adicionar contexto"""
-        name_field = ft.TextField(label="Nome", width=350)
-        desc_field = ft.TextField(label="Descrição", width=350)
-        type_dropdown = ft.Dropdown(
-            label="Tipo",
-            options=[
-                ft.dropdown.Option("git_repo", "Repositório Git"),
-                ft.dropdown.Option("local_file", "Arquivo Local"),
-                ft.dropdown.Option("url", "URL"),
-                ft.dropdown.Option("project_code", "Código do Projeto"),
-            ],
-            width=350
-        )
-        location_field = ft.TextField(label="Localização (URL, caminho ou repo)", width=350)
-        
-        def on_add(e):
-            name = name_field.value
-            description = desc_field.value
-            source_type = type_dropdown.value
-            location = location_field.value
-            
-            if all([name, description, source_type, location]):
-                if self.context_manager.add_context(
-                    source_id=name.lower().replace(" ", "_"),
-                    name=name,
-                    description=description,
-                    source_type=source_type,
-                    location=location
-                ):
-                    self.show_snackbar(f"Contexto '{name}' adicionado!")
-                    self.navigate_to("contexts")
-                else:
-                    self.show_snackbar("Erro ao adicionar contexto", is_error=True)
-            
-            dialog.open = False
-            self.page.update()
-        
+            items.controls.append(self._context_card(ctx))
+        self.content_area.content.controls = [header, hint, items]
+
+    def _context_card(self, ctx: dict) -> ft.Card:
+        cid = ctx["id"]
+        version = ctx.get("ref") or ctx.get("fetched_ref") or "-"
+        status = (f"🔍 indexada · {ctx.get('rag_chunks', 0)} chunks" if ctx["rag_indexed"]
+                  else "⏳ não indexada")
+        details = [
+            ft.Text(f"Tipo: {self.TYPE_LABELS.get(ctx['type'], ctx['type'])}", size=11),
+            ft.Text(f"Prioridade: {ctx['priority']}", size=11),
+            ft.Text(f"Versão: {version}", size=11),
+            ft.Text(status, size=11),
+        ]
+        actions = [ft.TextButton("Indexar", on_click=lambda e, i=cid: self.index_context(i))]
+        if ctx["type"] in ("git_repo", "url"):
+            actions.insert(0, ft.TextButton("Baixar", on_click=lambda e, i=cid: self.update_context(i)))
+        if ctx["type"] != "project_code":
+            actions += [ft.TextButton("Editar", on_click=lambda e, c=ctx: self.show_context_dialog(c)),
+                        ft.TextButton("Remover", on_click=lambda e, i=cid: self.delete_context(i))]
+        return ft.Card(content=ft.Container(padding=12, content=ft.Row([
+            ft.Switch(value=ctx["enabled"],
+                      on_change=lambda e, i=cid: self.toggle_context(i, e.control.value)),
+            ft.Column([
+                ft.Text(ctx["name"], size=16, weight=ft.FontWeight.BOLD),
+                ft.Text(ctx["description"], size=12, color=ft.Colors.GREY_400),
+                ft.Text(ctx["location"][:90], size=11, color=ft.Colors.GREY_400),
+                ft.Row(details, spacing=14, wrap=True),
+            ], expand=True, spacing=4),
+            ft.Column(actions, alignment=ft.MainAxisAlignment.CENTER),
+        ])))
+
+    def show_context_dialog(self, ctx: dict = None):
+        """Cadastro (ctx=None) ou edição de uma documentação."""
+        editing = ctx is not None
+        ctx = ctx or {}
+        name_f = ft.TextField(label="Nome", value=ctx.get("name", ""), width=420)
+        id_f = ft.TextField(label="ID (letras, números, _ ou -)", value=ctx.get("id", ""),
+                            width=420, disabled=editing)
+        desc_f = ft.TextField(label="Descrição", value=ctx.get("description", ""), width=420)
+        type_dd = ft.Dropdown(
+            label="Tipo", width=420, value=ctx.get("type", "git_repo"), disabled=editing,
+            options=[ft.DropdownOption(key=k, text=v) for k, v in self.TYPE_LABELS.items()
+                     if k != "project_code"])
+        loc_f = ft.TextField(label="Local: https://..., repositório git ou caminho",
+                             value=ctx.get("location", ""), width=420)
+        ref_f = ft.TextField(label="Versão git (tag/branch, ex.: v1.0.5)", value=ctx.get("ref") or "",
+                             width=420)
+        paths_f = ft.TextField(label="Subpastas git (separadas por vírgula)",
+                               value=", ".join(ctx.get("paths") or []), width=420)
+        prio_dd = ft.Dropdown(label="Prioridade", width=200, value=str(ctx.get("priority", 2)),
+                              options=[ft.DropdownOption(key=str(i), text=str(i)) for i in range(1, 6)])
+
+        def on_save(e):
+            paths = [p.strip() for p in (paths_f.value or "").split(",") if p.strip()]
+            if editing:
+                ok = self.context_manager.update_source(
+                    ctx["id"], name=name_f.value, description=desc_f.value, location=loc_f.value,
+                    ref=ref_f.value or None, paths=paths, priority=int(prio_dd.value))
+            else:
+                sid = (id_f.value or name_f.value or "").strip().lower().replace(" ", "_")
+                ok = self.context_manager.add_context(
+                    sid, name_f.value, desc_f.value or name_f.value, type_dd.value, loc_f.value,
+                    ref=ref_f.value or None, paths=paths, priority=int(prio_dd.value))
+            self.page.pop_dialog()
+            if ok:
+                self.show_snackbar("Documentação salva. Use 'Indexar' para a IA consultar.")
+            else:
+                self.show_snackbar(f"Erro: {self.context_manager.last_error}", is_error=True)
+            self.navigate_to("contexts")
+
         dialog = ft.AlertDialog(
-            title=ft.Text("Adicionar Contexto"),
-            content=ft.Column([name_field, desc_field, type_dropdown, location_field], 
-                            width=400, height=350),
-            actions=[
-                ft.TextButton("Cancelar", on_click=lambda e: setattr(dialog, 'open', False)),
-                ft.ElevatedButton("Adicionar", on_click=on_add)
-            ]
-        )
-        
-        self.page.dialog = dialog
-        dialog.open = True
-        self.page.update()
-    
+            title=ft.Text("Editar documentação" if editing else "Adicionar documentação"),
+            content=ft.Column([name_f, id_f, desc_f, type_dd, loc_f, ref_f, paths_f, prio_dd],
+                              width=440, height=520, scroll=ft.ScrollMode.AUTO),
+            actions=[ft.TextButton("Cancelar", on_click=lambda e: self.page.pop_dialog()),
+                     ft.Button("Salvar", on_click=on_save)])
+        self.page.show_dialog(dialog)
+
+    def _run_context_task(self, label: str, fn, context_id: str):
+        """Executa download/indexação em segundo plano (pode levar minutos)."""
+        self.show_snackbar(f"{label} '{context_id}'... aguarde")
+
+        def task():
+            ok = fn(context_id)
+            msg = (f"{label} '{context_id}': concluído" if ok
+                   else f"{label} '{context_id}' falhou: {self.context_manager.last_error}")
+            self.show_snackbar(msg, is_error=not ok)
+            self.navigate_to("contexts")
+            self.page.update()
+
+        self.page.run_thread(task)
+
+    def update_context(self, context_id: str):
+        self._run_context_task("Baixando", lambda i: self.context_manager.update_context(i, force=True),
+                               context_id)
+
+    def index_context(self, context_id: str):
+        self._run_context_task("Indexando", self.context_manager.index_context, context_id)
+
+    def toggle_context(self, context_id: str, enabled: bool):
+        self.context_manager.set_enabled(context_id, enabled)
+        self.show_snackbar(f"'{context_id}' {'ativada' if enabled else 'desativada'}")
+
+    def check_context_versions(self, e=None):
+        drifts = self.context_manager.check_versions()
+        if drifts:
+            txt = "; ".join(f"{d['id']}: {d['from']} → {d['to']}" for d in drifts)
+            self.show_snackbar(f"Versões atualizadas ({txt}). Reindexe essas documentações.")
+        else:
+            self.show_snackbar("Documentações já estão nas versões instaladas.")
+        self.navigate_to("contexts")
+
+    def delete_context(self, context_id: str):
+        def confirm(e):
+            self.page.pop_dialog()
+            if self.context_manager.remove_context(context_id):
+                self.show_snackbar("Documentação removida")
+            self.navigate_to("contexts")
+
+        self.page.show_dialog(ft.AlertDialog(
+            title=ft.Text("Confirmar exclusão"),
+            content=ft.Text(f"Remover '{context_id}' e o seu índice?"),
+            actions=[ft.TextButton("Cancelar", on_click=lambda e: self.page.pop_dialog()),
+                     ft.Button("Excluir", on_click=confirm)]))
+
     def show_rag_page(self):
         """Página de gerenciamento RAG"""
         rag_stats = self.rag.get_stats()
@@ -590,11 +635,11 @@ Campos: {', '.join(fields) if fields else 'Nenhum'}
         header = ft.Row([
             ft.Text("🔍 Gerenciamento RAG", size=30, weight=ft.FontWeight.BOLD),
             ft.Container(expand=True),
-            ft.ElevatedButton(
+            ft.Button(
                 "📥 Indexar Projeto",
                 on_click=self.index_project_rag
             ),
-            ft.ElevatedButton(
+            ft.Button(
                 "🗑️ Limpar Índice",
                 on_click=self.clear_rag_index
             )
@@ -623,7 +668,7 @@ Campos: {', '.join(fields) if fields else 'Nenhum'}
         
         # Busca RAG
         search_field = ft.TextField(label="Buscar no código", hint_text="Digite sua pergunta...", expand=True)
-        search_button = ft.ElevatedButton("🔍 Buscar")
+        search_button = ft.Button("🔍 Buscar")
         search_results = ft.Column(spacing=10)
         
         def on_search(e):
@@ -679,7 +724,7 @@ Campos: {', '.join(fields) if fields else 'Nenhum'}
         header = ft.Row([
             ft.Text("🔌 MCP Servers", size=30, weight=ft.FontWeight.BOLD),
             ft.Container(expand=True),
-            ft.ElevatedButton(
+            ft.Button(
                 "➕ Adicionar Servidor",
                 on_click=self.show_add_mcp_dialog
             )
@@ -713,12 +758,10 @@ Campos: {', '.join(fields) if fields else 'Nenhum'}
     # Ações auxiliares
     def show_snackbar(self, message: str, is_error: bool = False):
         """Mostra uma mensagem temporária"""
-        self.page.snack_bar = ft.SnackBar(
+        self.page.show_dialog(ft.SnackBar(
             content=ft.Text(message),
             bgcolor=ft.Colors.RED if is_error else ft.Colors.GREEN
-        )
-        self.page.snack_bar.open = True
-        self.page.update()
+        ))
     
     def toggle_agent(self, agent):
         """Habilita/desabilita um agente"""
@@ -731,59 +774,22 @@ Campos: {', '.join(fields) if fields else 'Nenhum'}
             if self.agent_manager.delete_agent(agent.name):
                 self.show_snackbar(f"Agente '{agent.name}' removido")
                 self.navigate_to("agents")
-            dialog.open = False
-            self.page.update()
+            self.page.pop_dialog()
         
         dialog = ft.AlertDialog(
             title=ft.Text("Confirmar exclusão"),
             content=ft.Text(f"Tem certeza que deseja remover o agente '{agent.name}'?"),
             actions=[
-                ft.TextButton("Cancelar", on_click=lambda e: setattr(dialog, 'open', False)),
-                ft.ElevatedButton("Excluir", on_click=confirm)
+                ft.TextButton("Cancelar", on_click=lambda e: self.page.pop_dialog()),
+                ft.Button("Excluir", on_click=confirm)
             ]
         )
         
-        self.page.dialog = dialog
-        dialog.open = True
-        self.page.update()
+        self.page.show_dialog(dialog)
     
     def edit_agent(self, agent):
         """Edita um agente"""
         self.show_snackbar(f"Editar {agent.name} - Em desenvolvimento")
-    
-    def update_context(self, context_id: str):
-        """Atualiza um contexto"""
-        if self.context_manager.update_context(context_id, force=True):
-            self.show_snackbar(f"Contexto atualizado!")
-            self.navigate_to("contexts")
-    
-    def index_context(self, context_id: str):
-        """Indexa um contexto para RAG"""
-        if self.context_manager.index_context(context_id, verbose=True):
-            self.show_snackbar(f"Contexto indexado!")
-            self.navigate_to("contexts")
-    
-    def delete_context(self, context_id: str):
-        """Remove um contexto"""
-        def confirm(e):
-            if self.context_manager.remove_context(context_id):
-                self.show_snackbar(f"Contexto removido")
-                self.navigate_to("contexts")
-            dialog.open = False
-            self.page.update()
-        
-        dialog = ft.AlertDialog(
-            title=ft.Text("Confirmar exclusão"),
-            content=ft.Text(f"Tem certeza que deseja remover este contexto?"),
-            actions=[
-                ft.TextButton("Cancelar", on_click=lambda e: setattr(dialog, 'open', False)),
-                ft.ElevatedButton("Excluir", on_click=confirm)
-            ]
-        )
-        
-        self.page.dialog = dialog
-        dialog.open = True
-        self.page.update()
     
     def delete_intent(self, intent_name: str):
         """Remove uma intenção"""
@@ -791,18 +797,15 @@ Campos: {', '.join(fields) if fields else 'Nenhum'}
             if self.intent_manager.delete_intent(intent_name):
                 self.show_snackbar(f"Intenção '{intent_name}' removida")
                 self.navigate_to("intents")
-            dialog.open = False
-            self.page.update()
+            self.page.pop_dialog()
         
         dialog = ft.AlertDialog(
             title=ft.Text("Confirmar exclusão"),
             content=ft.Text(f"Tem certeza que deseja remover a intenção '{intent_name}'?"),
             actions=[
-                ft.TextButton("Cancelar", on_click=lambda e: setattr(dialog, 'open', False)),
-                ft.ElevatedButton("Excluir", on_click=confirm)
+                ft.TextButton("Cancelar", on_click=lambda e: self.page.pop_dialog()),
+                ft.Button("Excluir", on_click=confirm)
             ]
         )
         
-        self.page.dialog = dialog
-        dialog.open = True
-        self.page.update()
+        self.page.show_dialog(dialog)

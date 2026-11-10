@@ -61,9 +61,19 @@ class RAGManager:
 
     def __init__(self, project_path: Path, embed_model: Optional[str] = None,
                  chunk_size: Optional[int] = None, chunk_overlap: Optional[int] = None,
-                 embed_fn: Optional[Callable[[List[str]], List[List[float]]]] = None):
+                 embed_fn: Optional[Callable[[List[str]], List[List[float]]]] = None,
+                 root: Optional[Path] = None, index_path: Optional[Path] = None,
+                 extensions: Optional[set] = None, skip_dirs: Optional[set] = None):
+        """
+        project_path: projeto Fleting (lê .flai/config.json)
+        root:         pasta a indexar (padrão: o projeto; para documentações, a pasta baixada)
+        index_path:   onde salvar o índice (padrão: .flai/vectordb)
+        """
         self.project_path = Path(project_path)
-        self.index_path = self.project_path / ".flai" / "vectordb"
+        self.root = Path(root) if root else self.project_path
+        self.extensions = extensions or INDEX_EXTENSIONS
+        self.skip_dirs = SKIP_DIRS if skip_dirs is None else skip_dirs
+        self.index_path = Path(index_path) if index_path else self.project_path / ".flai" / "vectordb"
         self.index_file = self.index_path / "index.json"
         cfg = self._load_rag_config()
         self.embed_model = embed_model or cfg.get("embedding_model", DEFAULT_EMBED_MODEL)
@@ -104,8 +114,22 @@ class RAGManager:
             raise RuntimeError(f"Ollama /api/embed {r.status_code}: {r.text[:200]}")
         return r.json()["embeddings"]
 
-    def _embed(self, texts: List[str]) -> List[List[float]]:
+    @property
+    def _prefixes(self) -> tuple:
+        """nomic-embed-text foi treinado com prefixos de tarefa; melhora bastante a busca."""
+        if "nomic" in self.embed_model and self.backend != "custom":
+            return ("search_document: ", "search_query: ")
+        return ("", "")
+
+    @property
+    def index_key(self) -> str:
+        """Identifica modelo + formato; se mudar, o índice é refeito."""
+        return self.embed_model + ("+prefix" if self._prefixes[0] else "")
+
+    def _embed(self, texts: List[str], kind: str = "document") -> List[List[float]]:
         fn = self._embedder()
+        prefix = self._prefixes[0 if kind == "document" else 1]
+        texts = [prefix + t for t in texts]
         out: List[List[float]] = []
         for i in range(0, len(texts), EMBED_BATCH):
             out.extend(_norm(v) for v in fn(texts[i:i + EMBED_BATCH]))
@@ -144,7 +168,7 @@ class RAGManager:
             if self.index_file.exists():
                 self._index = json.loads(self.index_file.read_text(encoding="utf-8"))
             else:
-                self._index = {"model": self.embed_model, "files": {}, "chunks": []}
+                self._index = {"model": self.index_key, "files": {}, "chunks": []}
         return self._index
 
     def save(self) -> None:
@@ -153,7 +177,7 @@ class RAGManager:
 
     def _save(self) -> None:
         idx = self._load()
-        idx["model"] = self.embed_model
+        idx["model"] = self.index_key
         idx["updated_at"] = datetime.now().isoformat()
         self.index_path.mkdir(parents=True, exist_ok=True)
         tmp = self.index_file.with_suffix(".tmp")
@@ -166,17 +190,19 @@ class RAGManager:
 
     def _project_files(self) -> List[Path]:
         files = []
-        for f in self.project_path.rglob("*"):
-            rel = f.relative_to(self.project_path)
-            if any(part in SKIP_DIRS for part in rel.parts[:-1]):
+        if not self.root.exists():
+            return files
+        for f in self.root.rglob("*"):
+            rel = f.relative_to(self.root)
+            if any(part in self.skip_dirs for part in rel.parts[:-1]):
                 continue
-            if f.is_file() and f.suffix in INDEX_EXTENSIONS and f.stat().st_size <= MAX_FILE_BYTES:
+            if f.is_file() and f.suffix in self.extensions and f.stat().st_size <= MAX_FILE_BYTES:
                 files.append(f)
         return sorted(files)
 
     def _rel(self, file_path: Path) -> str:
         try:
-            return Path(file_path).resolve().relative_to(self.project_path.resolve()).as_posix()
+            return Path(file_path).resolve().relative_to(self.root.resolve()).as_posix()
         except ValueError:
             return Path(file_path).resolve().as_posix()
 
@@ -191,7 +217,7 @@ class RAGManager:
         idx = self._load()
         key = self._rel(file_path)
         digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
-        if idx["files"].get(key) == digest and idx.get("model") == self.embed_model:
+        if idx["files"].get(key) == digest and idx.get("model") == self.index_key:
             return True
         chunks = self._split(text)
         vectors = self._embed(chunks) if chunks else []
@@ -210,8 +236,9 @@ class RAGManager:
             return False
         try:
             idx = self._load()
-            if idx.get("model") != self.embed_model:  # modelo trocou: refaz tudo
-                self._index = {"model": self.embed_model, "files": {}, "chunks": []}
+            self._embedder()  # define o backend antes de comparar o formato
+            if idx.get("model") != self.index_key:  # modelo/formato trocou: refaz tudo
+                self._index = {"model": self.index_key, "files": {}, "chunks": []}
                 idx = self._index
             files = self._project_files()
             current = {self._rel(f) for f in files}
@@ -238,7 +265,7 @@ class RAGManager:
         if not idx["chunks"] or not query.strip():
             return []
         try:
-            q = self._embed([query])[0]
+            q = self._embed([query], kind="query")[0]
         except Exception as e:
             self.last_error = str(e)
             if verbose:
