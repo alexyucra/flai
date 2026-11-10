@@ -46,7 +46,7 @@ def normalize_path(path: str) -> str:
     """
     Normaliza caminho para o formato da plataforma
     
-    Converte / para \ no Windows e vice-versa
+    Converte / para \\ no Windows e vice-versa
     """
     if is_windows():
         return str(Path(path)).replace("/", "\\")

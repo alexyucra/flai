@@ -38,11 +38,24 @@ classifiers = [
 
 dependencies = [
     "fleting",
+    "flet",
     "rich",
     "typer",
+    "click",
     "psutil",
-    "langchain"
+    "pyyaml>=6",
+    "requests>=2.31",
+    "pydantic>=2,<3",
+    "unidecode",
 ]
+
+[project.optional-dependencies]
+# RAG: índice local leve (JSON) + embeddings do Ollama. Sem estes pacotes o FLAI
+# usa a API HTTP do Ollama e um divisor de texto interno. Sem chromadb.
+rag = ["langchain-ollama>=0.2", "langchain-text-splitters>=0.3"]
+# Provedor externo (flai.yml) — reservado, não usado até o FLAI estar finalizado
+remote = ["langchain-groq", "python-dotenv"]
+dev = ["pytest", "pytest-cov"]
 
 # ------------------------
 # CLI ENTRY POINT

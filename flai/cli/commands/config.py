@@ -58,12 +58,9 @@ def web_start(
     if isinstance(project_path, str):
         project_path = Path(project_path)
     
-    console.print(f"[cyan]🌐 Iniciando servidor de configuração em http://localhost:{port}[/cyan]")
     console.print(f"[dim]📁 Projeto: {project_path}[/dim]")
-    
-    if not no_browser:
-        webbrowser.open(f"http://localhost:{port}")
-    
+
+    # O navegador é aberto por FLAIWebServer.start (antes abria duas vezes)
     server = _get_web_server(project_path, port)
     if server:
         server.start(open_browser=not no_browser)

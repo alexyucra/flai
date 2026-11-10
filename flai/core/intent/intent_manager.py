@@ -11,6 +11,7 @@ import yaml
 import re
 import json
 from datetime import datetime
+from flai.core.security import safe_name, safe_join
 
 class IntentPriority(Enum):
     """Prioridade de intenção (para resolver conflitos)"""
@@ -118,7 +119,7 @@ class IntentManager:
         intent_dir = self.intents_dir / "intents"
         intent_dir.mkdir(exist_ok=True)
         
-        intent_file = intent_dir / f"{intent.name}.yaml"
+        intent_file = safe_join(intent_dir, f"{safe_name(intent.name)}.yaml")
         intent_file.write_text(yaml.dump(intent.to_dict()), encoding='utf-8')
         
         # Atualiza cache em memória
@@ -127,7 +128,7 @@ class IntentManager:
     
     def _delete_intent_file(self, intent_name: str):
         """Remove arquivo de intenção"""
-        intent_file = self.intents_dir / "intents" / f"{intent_name}.yaml"
+        intent_file = safe_join(self.intents_dir, "intents", f"{safe_name(intent_name)}.yaml")
         if intent_file.exists():
             intent_file.unlink()
     

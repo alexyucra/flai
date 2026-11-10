@@ -14,7 +14,16 @@ from datetime import datetime
 import traceback
 
 import asyncio
+import importlib.util
 from flai.core.async_utils import run_async
+from flai.core.security import (
+    safe_name,
+    safe_join,
+    validate_module_path,
+    UnsafePathError,
+    UnsafeModuleError,
+)
+from flai.core.security.modules import custom_agents_allowed
 
 class AgentPriority(Enum):
     """Prioridade do agente na pipeline"""
@@ -198,7 +207,7 @@ class AgentManager:
             agent_dir = self.agents_dir / "custom"
         
         agent_dir.mkdir(exist_ok=True)
-        agent_file = agent_dir / f"{agent.name}.yaml"
+        agent_file = safe_join(agent_dir, f"{safe_name(agent.name)}.yaml")
         agent_file.write_text(yaml.dump(agent.to_dict()), encoding='utf-8')
         
         self.agents[agent.name] = agent
@@ -206,7 +215,7 @@ class AgentManager:
     
     def _delete_agent_file(self, agent_name: str):
         """Remove arquivo de agente"""
-        agent_file = self.agents_dir / "custom" / f"{agent_name}.yaml"
+        agent_file = safe_join(self.agents_dir, "custom", f"{safe_name(agent_name)}.yaml")
         if agent_file.exists():
             agent_file.unlink()
     
@@ -368,8 +377,17 @@ class AgentManager:
             return None
         
         try:
-            # Importa o módulo dinamicamente
-            module = importlib.import_module(agent_def.module_path)
+            if agent_def.type == AgentType.CUSTOM:
+                # SEC-01: código Python do projeto só roda com opt-in explícito
+                if not custom_agents_allowed():
+                    print(
+                        f"Agente customizado '{agent_name}' ignorado: "
+                        "defina FLAI_ALLOW_CUSTOM_AGENTS=1 para permitir."
+                    )
+                    return None
+                module = self._load_custom_module(agent_name)
+            else:
+                module = importlib.import_module(validate_module_path(agent_def.module_path))
             agent_class = getattr(module, agent_def.class_name)
             
             # Instancia o agente
@@ -383,6 +401,17 @@ class AgentManager:
             traceback.print_exc()
             return None
     
+    def _load_custom_module(self, agent_name: str):
+        """Carrega .flai/agents/custom/<nome>/agent.py pelo caminho do arquivo."""
+        name = safe_name(agent_name)
+        agent_file = safe_join(self.agents_dir, "custom", name, "agent.py")
+        if not agent_file.exists():
+            raise FileNotFoundError(f"Arquivo do agente não encontrado: {agent_file}")
+        spec = importlib.util.spec_from_file_location(f"flai_custom_agent_{name}", agent_file)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+
     def get_agent_for_intent(self, intent: str) -> List[BaseAgent]:
         """Retorna lista de agentes que podem lidar com a intenção"""
         agents = []
@@ -465,7 +494,8 @@ class AgentManager:
             agent_code: Código fonte do agente
             agent_name: Nome do agente
         """
-        custom_dir = self.agents_dir / "custom" / agent_name
+        agent_name = safe_name(agent_name)
+        custom_dir = safe_join(self.agents_dir, "custom", agent_name)
         custom_dir.mkdir(parents=True, exist_ok=True)
         
         # Salva o código do agente
@@ -477,7 +507,8 @@ class AgentManager:
             "name": agent_name,
             "description": f"Custom agent: {agent_name}",
             "type": "custom",
-            "module_path": f".flai.agents.custom.{agent_name}.agent",
+            # Carregado por arquivo em _load_custom_module (não via import_module)
+            "module_path": f"custom.{agent_name}.agent",
             "class_name": f"{agent_name.capitalize()}Agent",
             "priority": 2,
             "enabled": True,

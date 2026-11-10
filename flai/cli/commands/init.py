@@ -23,6 +23,21 @@ from rich.panel import Panel
 app = typer.Typer()
 DEFAULT_PROJECT_NAME = "ia"
 
+_GITIGNORE_ENTRIES = [".flai/sessions/", ".flai/vectordb/", ".flai/contexts/", "*.log"]
+
+
+def _ensure_gitignore(project_root: Path) -> None:
+    """Adiciona ao .gitignore do projeto os dados locais gerados pelo FLAI."""
+    gitignore = project_root / ".gitignore"
+    existing = gitignore.read_text(encoding="utf-8").splitlines() if gitignore.exists() else []
+    missing = [e for e in _GITIGNORE_ENTRIES if e not in existing]
+    if missing:
+        with open(gitignore, "a", encoding="utf-8") as f:
+            if existing and existing[-1].strip():
+                f.write("\n")
+            f.write("# FLAI (dados locais)\n" + "\n".join(missing) + "\n")
+
+
 def handle_init(model_arg: str = None, path: str = ".", verbose: bool = False) -> None:
     """
     Inicializa o ambiente de IA local (Ollama) integrando o OllamaManager.
@@ -140,6 +155,9 @@ def handle_init(model_arg: str = None, path: str = ".", verbose: bool = False) -
 
         with open(config_file, 'w', encoding='utf-8') as f:
             f.write(config.to_json())
+
+        # Auditoria PRIV-02: histórico de conversas e índices não devem ir para o git
+        _ensure_gitignore(project_root)
 
         # config_data = {
         #     "model": selected_model,  # Salva 'flai-coder' se a otimização funcionou

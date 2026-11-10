@@ -319,7 +319,109 @@ Não faça referência a arquivos ou pastas externas.
             return "Erro: Timeout - o modelo demorou muito para responder"
         except Exception as e:
             return f"Erro ao executar modelo: {str(e)}"
-    
+
+    # ------------------------------------------------------------------
+    # API usada pelo ResourceGuard (RAM / limites de tokens)
+    # ------------------------------------------------------------------
+    def _api(self, method: str, path: str, payload: Optional[Dict] = None, timeout: int = 30):
+        import requests
+        url = f"{self.server_url}{path}"
+        if method == "GET":
+            return requests.get(url, timeout=timeout)
+        return requests.post(url, json=payload or {}, timeout=timeout)
+
+    def list_local_models(self) -> Dict[str, int]:
+        """{nome: tamanho_em_bytes} dos modelos já baixados."""
+        try:
+            r = self._api("GET", "/api/tags", timeout=5)
+            return {m["name"]: int(m.get("size", 0)) for m in r.json().get("models", [])}
+        except Exception:
+            return {}
+
+    def loaded_models(self) -> Dict[str, int]:
+        """{nome: bytes em memória} dos modelos carregados agora (/api/ps)."""
+        try:
+            r = self._api("GET", "/api/ps", timeout=5)
+            return {m["name"]: int(m.get("size", 0)) for m in r.json().get("models", [])}
+        except Exception:
+            return {}
+
+    def show_model(self, model: str) -> Dict:
+        try:
+            r = self._api("POST", "/api/show", {"model": model}, timeout=15)
+            return r.json() if r.status_code == 200 else {}
+        except Exception:
+            return {}
+
+    def model_footprint(self, model: str):
+        """ModelFootprint (pesos + KV cache por token) do modelo base."""
+        from flai.core.resources import ModelFootprint
+        local = self.list_local_models()
+        size = local.get(model) or local.get(f"{model}:latest", 0)
+        loaded = self.loaded_models()
+        return ModelFootprint.from_ollama(model, self.show_model(model), size,
+                                          loaded.get(model, 0))
+
+    def base_model_of(self, model: str) -> str:
+        """Se `model` é um derivado flai-*, retorna o modelo de origem (FROM)."""
+        show = self.show_model(model)
+        for line in (show.get("modelfile") or "").splitlines():
+            if line.startswith("FROM ") and not line.strip().endswith(".gguf") and "blobs" not in line:
+                return line[5:].strip()
+        parent = (show.get("details") or {}).get("parent_model")
+        return parent or model
+
+    def ensure_optimized_model(self, base_model: str, num_ctx: int, num_predict: int,
+                               temperature: float = 0.7) -> Optional[str]:
+        """
+        Cria (uma vez) o modelo derivado com contexto reduzido:
+        flai-<base>:ctx<N>  (FROM base + num_ctx/num_predict). Retorna o nome.
+        """
+        from flai.core.resources import optimized_model_name
+        name = optimized_model_name(base_model, num_ctx)
+        if name in self.list_local_models():
+            return name
+        payload = {
+            "model": name,
+            "from": base_model,
+            "parameters": {"num_ctx": num_ctx, "num_predict": num_predict,
+                           "temperature": temperature},
+            "stream": False,
+        }
+        try:
+            r = self._api("POST", "/api/create", payload, timeout=300)
+            if r.status_code == 200:
+                logger.info(f"Modelo otimizado criado: {name}")
+                return name
+            logger.error(f"Falha ao criar {name}: {r.status_code} {r.text[:200]}")
+        except Exception as e:
+            logger.error(f"Falha ao criar {name}: {e}")
+        return None
+
+    def generate(self, model: str, prompt: str, options: Optional[Dict] = None,
+                 timeout: int = 300) -> Dict[str, Any]:
+        """
+        Gera resposta sem baixar modelos automaticamente.
+        Retorna {"ok", "text", "prompt_tokens", "output_tokens", "truncated_by_ctx"}.
+        """
+        if not self.is_server_running() and not (self.auto_start and self.start_server()):
+            return {"ok": False, "text": "Erro: servidor Ollama não está rodando"}
+        payload = {"model": model, "prompt": prompt, "stream": False, "options": options or {}}
+        try:
+            r = self._api("POST", "/api/generate", payload, timeout=timeout)
+            if r.status_code != 200:
+                return {"ok": False, "text": f"Erro API {r.status_code}: {r.text[:200]}"}
+            d = r.json()
+            return {
+                "ok": True,
+                "text": d.get("response", ""),
+                "prompt_tokens": d.get("prompt_eval_count", 0),
+                "output_tokens": d.get("eval_count", 0),
+                "done_reason": d.get("done_reason"),
+            }
+        except Exception as e:
+            return {"ok": False, "text": f"Erro ao executar modelo: {e}"}
+
     def run_model_cli(self, model: str, prompt: str, timeout: int = 120) -> str:
         """Executa modelo via CLI (fallback)"""
         

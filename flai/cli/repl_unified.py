@@ -18,6 +18,7 @@ from flai.cli.console.console import console
 from flai.core.project import get_project_root
 from flai.cli.utils.ollama_manager import get_ollama_manager
 from flai.cli.utils.cache import cache
+from flai.core.security import safe_name, safe_join
 
 class ConversationHistory:
     """Gerencia histórico de conversa em Markdown"""
@@ -29,8 +30,8 @@ class ConversationHistory:
         
         # Cria ou carrega sessão
         if session_name:
-            self.session_name = session_name
-            self.session_file = self.sessions_dir / f"{session_name}.md"
+            self.session_name = safe_name(session_name)
+            self.session_file = safe_join(self.sessions_dir, f"{self.session_name}.md")
         else:
             self.session_name = datetime.now().strftime("%Y%m%d_%H%M%S")
             self.session_file = self.sessions_dir / f"session_{self.session_name}.md"
@@ -182,9 +183,11 @@ class FLAIUnifiedREPL:
         self.running = True
         
         # Carrega configuração
+        self.config: Dict[str, Any] = {}
         self._load_config()
         
-        self.router = RouterAgent(self.project_path)  # RouterAgent já usa registro
+        # Confirmação antes de ações que alteram o projeto ou executam código dele
+        self.router = RouterAgent(self.project_path, model=self.model, confirm=self._confirm)
         self.rag = get_rag(self.project_path, auto_index=True)     # ✅ Compartilhado
         self.agent_manager = get_agent_manager(self.project_path)  # ✅ Compartilhado
         self.context_manager = get_context_manager(self.project_path)  # ✅ Compartilhado
@@ -197,6 +200,12 @@ class FLAIUnifiedREPL:
         # Cache para evitar verificações repetidas
         self._initialized = False
     
+    @staticmethod
+    def _confirm(question: str) -> bool:
+        from rich.markup import escape
+        answer = console.input(f"[yellow]⚠️ {escape(question)} \\[s/N]: [/yellow]").strip().lower()
+        return answer in ("s", "sim", "y", "yes")
+
     def _load_config(self):
         """Carrega configuração do projeto"""
         config_file = self.project_path / ".flai" / "config.json"
@@ -205,6 +214,7 @@ class FLAIUnifiedREPL:
             try:
                 with open(config_file) as f:
                     config = json.load(f)
+                    self.config = config
                     if not self.model:
                         self.model = config.get("model", "flai-coder")
             except:
@@ -226,6 +236,9 @@ class FLAIUnifiedREPL:
             console.print("[red]❌ Ollama não está pronto. Execute 'flai init' primeiro.[/red]")
             return False
         
+        # RAM e limites de tokens: usa modelo derivado com contexto reduzido
+        self._prepare_tokens()
+
         # Mostra status do RAG
         rag_stats = self.rag.get_stats()
         if rag_stats.get("exists"):
@@ -236,6 +249,34 @@ class FLAIUnifiedREPL:
         self._initialized = True
         return True
     
+    def _prepare_tokens(self):
+        plan = self.router.prepare_model(
+            context_tokens=int(self.config.get("context_tokens", 2048)),
+            max_tokens=int(self.config.get("max_tokens", 512)),
+            use_optimized=bool(self.config.get("use_optimized_model", True)),
+            temperature=float(self.config.get("temperature", 0.7)),
+        )
+        self.model = self.router.model
+        console.print(f"[dim]🧠 {plan.summary()}[/dim]")
+        if self.model != self.router.base_model:
+            console.print(f"[dim]⚙️ Modelo filtrado: {self.model} (base {self.router.base_model})[/dim]")
+        for w in plan.warnings:
+            console.print(f"[yellow]⚠️ {w}[/yellow]")
+
+    def _show_tokens(self):
+        plan = self.router.plan
+        if not plan:
+            console.print("[dim]Plano de tokens ainda não calculado[/dim]")
+            return
+        console.print(f"[cyan]🧠 {plan.summary()}[/cyan]")
+        console.print(f"[dim]Orçamento do prompt: {plan.prompt_budget} tokens[/dim]")
+        if self.router.last_tokens:
+            t = self.router.last_tokens
+            console.print(f"[dim]Última pergunta: estimado {t['estimated_prompt']} · "
+                          f"real prompt {t['prompt']} + resposta {t['output']}[/dim]")
+        console.print('[dim]Ajuste em .flai/config.json: "context_tokens", "max_tokens", '
+                      '"use_optimized_model". /tokens refresh recalcula com a RAM atual.[/dim]')
+
     def _print_welcome(self):
         """Exibe mensagem de boas-vindas"""
         rag_status = "🔍 RAG: ✅" if self.rag.get_stats().get("exists") else "🔍 RAG: ❌"
@@ -252,10 +293,14 @@ class FLAIUnifiedREPL:
 ║      • criar form de <nome>                                         ║
 ║      • analise o <componente>                                       ║
 ║      • onde está <código/busca>                                     ║
+║      • criar página <nome> | criar model <nome>                     ║
+║      • fleting <comando>  (ex.: fleting list pages, fleting doctor) ║
+║      • perguntas livres com '?' vão para a IA local                 ║
 ║      • /help            - Mostra ajuda completa                     ║
 ║      • /history         - Mostra histórico da sessão                ║
 ║      • /export          - Exporta histórico para Markdown           ║
 ║      • /clear           - Limpa histórico (nova sessão)             ║
+║      • /tokens [refresh] - RAM, contexto e uso de tokens            ║
 ║      • /rag index       - (Re)indexa projeto para busca semântica   ║
 ║      • /rag search <q>  - Busca semântica no código                 ║
 ║      • /exit ou /quit   - Sai do programa                           ║
@@ -295,6 +340,13 @@ class FLAIUnifiedREPL:
         
         elif command == 'clear':
             self.history.clear()
+            return True
+
+        elif command == 'tokens':
+            if len(cmd_parts) > 1 and cmd_parts[1] == 'refresh':
+                self.router.model = self.router.base_model
+                self._prepare_tokens()
+            self._show_tokens()
             return True
         
         elif command == 'export':
@@ -485,11 +537,16 @@ class FLAIUnifiedREPL:
         result_type = result.get("type", ResultType.ERROR)
         
         if result_type == ResultType.CRUD_RESULT:
-            content = result.get("content", {})
+            lines = [f"{'✅' if s['success'] else '⏭️'} {s['message']}" for s in result.get("steps", [])]
             if result.get("success"):
-                return f"✅ CRUD '{content.get('entity')}' criado com sucesso!"
+                lines.insert(0, f"✅ CRUD '{result.get('entity')}' criado com sucesso!")
             else:
-                return f"❌ Erro: {content.get('errors', ['Falha'])[0]}"
+                errors = result.get("errors") or ["Falha"]
+                lines.insert(0, f"❌ Erro: {errors[0]}")
+            return "\n".join(lines)
+
+        elif result_type == "fleting":
+            return result.get("content", "")
         
         elif result_type == ResultType.FORM_RESULT:
             return f"✅ {result.get('content', {}).get('message', 'Formulário criado')}"
@@ -549,8 +606,11 @@ class FLAIUnifiedREPL:
         console.print("─" * 60)
 
 
-def run_unified_repl(project_path: Optional[Path] = None, model: Optional[str] = None):
+def run_unified_repl(project_path: Optional[Path] = None, model: Optional[str] = None,
+                     session: Optional[str] = None):
     """Função principal para iniciar o REPL unificado"""
     repl = FLAIUnifiedREPL(project_path, model)
+    if session:
+        repl.history = ConversationHistory(repl.project_path, session)
     asyncio.run(repl.run())
     # repl.run()

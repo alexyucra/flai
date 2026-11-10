@@ -10,6 +10,10 @@ import json
 import yaml
 import hashlib
 from datetime import datetime
+from flai.core.security import safe_name, safe_join, validate_remote_url
+
+MAX_URL_BYTES = 5 * 1024 * 1024  # 5 MB
+GIT_TIMEOUT = 300
 
 class ContextType(Enum):
     """Tipo de fonte de contexto"""
@@ -142,6 +146,10 @@ class ContextManager:
                     **kwargs) -> bool:
         """Adiciona uma nova fonte de contexto"""
         try:
+            safe_name(source_id)
+            ctype = ContextType(source_type)
+            if ctype in (ContextType.URL, ContextType.GIT_REPO):
+                validate_remote_url(location)
             source = ContextSource(
                 id=source_id,
                 name=name,
@@ -159,9 +167,9 @@ class ContextManager:
             self._save_config()
             
             # Cria diretório da fonte
-            source_dir = self.contexts_dir / source_id
+            source_dir = safe_join(self.contexts_dir, source_id)
             source_dir.mkdir(exist_ok=True)
-            
+
             return True
         except Exception as e:
             print(f"Erro ao adicionar contexto: {e}")
@@ -196,24 +204,29 @@ class ContextManager:
         """Clona ou atualiza repositório git"""
         import subprocess
         
-        source_dir = self.contexts_dir / source.id
-        source_dir.mkdir(exist_ok=True)
-        
         try:
+            validate_remote_url(source.location)
+            source_dir = safe_join(self.contexts_dir, safe_name(source.id))
+            source_dir.mkdir(exist_ok=True)
+            # SEC-04: só transporte https; bloqueia ext::, file:// etc.
+            git_safe = ["git", "-c", "protocol.allow=never", "-c", "protocol.https.allow=always"]
+
             # Se já existe, faz pull
             if (source_dir / ".git").exists():
                 result = subprocess.run(
-                    ["git", "pull"],
+                    git_safe + ["pull", "--ff-only"],
                     cwd=source_dir,
                     capture_output=True,
-                    text=True
+                    text=True,
+                    timeout=GIT_TIMEOUT,
                 )
             else:
                 # Clona o repositório
                 result = subprocess.run(
-                    ["git", "clone", source.location, str(source_dir)],
+                    git_safe + ["clone", "--depth", "1", "--", source.location, str(source_dir)],
                     capture_output=True,
-                    text=True
+                    text=True,
+                    timeout=GIT_TIMEOUT,
                 )
             
             if result.returncode == 0:
@@ -246,13 +259,16 @@ class ContextManager:
         """Baixa conteúdo de URL"""
         import urllib.request
         
-        source_dir = self.contexts_dir / source.id
-        source_dir.mkdir(exist_ok=True)
-        
         try:
+            validate_remote_url(source.location)
+            source_dir = safe_join(self.contexts_dir, safe_name(source.id))
+            source_dir.mkdir(exist_ok=True)
             output_file = source_dir / "content.md"
             with urllib.request.urlopen(source.location, timeout=30) as response:
-                content = response.read().decode('utf-8')
+                raw = response.read(MAX_URL_BYTES + 1)
+                if len(raw) > MAX_URL_BYTES:
+                    raise ValueError(f"Conteúdo excede {MAX_URL_BYTES} bytes")
+                content = raw.decode('utf-8', errors='replace')
                 output_file.write_text(content, encoding='utf-8')
             
             source.last_update = datetime.now().isoformat()
@@ -306,8 +322,10 @@ class ContextManager:
         # Indexa cada documento
         indexed_count = 0
         for doc in documents:
-            if rag.rag.add_file(doc, verbose=False):
+            if rag.add_file(doc, verbose=False):
                 indexed_count += 1
+        if indexed_count:
+            rag.save()
         
         source.rag_indexed = True
         self._save_config()

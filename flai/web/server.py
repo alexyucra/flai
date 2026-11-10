@@ -8,6 +8,9 @@ import webbrowser
 from pathlib import Path
 from typing import Optional, Dict, Any
 import json
+import os
+
+LOOPBACK_HOSTS = {"127.0.0.1", "localhost", "::1"}
 
 from flai.core.agents.agent_manager import AgentManager
 from flai.core.intent.intent_manager import IntentManager
@@ -18,9 +21,17 @@ from flai.cli.console.console import console
 class FLAIWebServer:
     """Servidor web Flet para gerenciamento do FLAI"""
     
-    def __init__(self, project_path: Path, port: int = 8080):
+    def __init__(self, project_path: Path, port: int = 8080, host: str = "127.0.0.1"):
         self.project_path = project_path
         self.port = port
+        # Auditoria SEC-02: o painel não tem autenticação, então escuta só em loopback.
+        if host not in LOOPBACK_HOSTS and os.getenv("FLAI_WEB_ALLOW_REMOTE", "0") != "1":
+            console.print(
+                f"[yellow]⚠️ Host '{host}' ignorado: painel restrito a 127.0.0.1 "
+                "(defina FLAI_WEB_ALLOW_REMOTE=1 para liberar).[/yellow]"
+            )
+            host = "127.0.0.1"
+        self.host = host
         self.page = None
         
         # Gerenciadores
@@ -35,12 +46,13 @@ class FLAIWebServer:
     
     def start(self, open_browser: bool = True):
         """Inicia o servidor web"""
-        console.print(f"[cyan]🌐 Iniciando servidor web em http://localhost:{self.port}[/cyan]")
-        
+        url = f"http://{self.host}:{self.port}"
+        console.print(f"[cyan]🌐 Iniciando servidor web em {url}[/cyan]")
+
         if open_browser:
-            webbrowser.open(f"http://localhost:{self.port}")
-        
-        ft.app(target=self.main, port=self.port, view=ft.AppView.WEB_BROWSER)
+            webbrowser.open(url)
+
+        ft.app(target=self.main, host=self.host, port=self.port, view=ft.AppView.WEB_BROWSER)
     
     def main(self, page: ft.Page):
         """Página principal do aplicativo"""

@@ -25,13 +25,10 @@ def sanitize_user_input(text: str) -> str:
     # Remove caracteres de controle (exceto newline, tab)
     text = ''.join(ch for ch in text if ord(ch) >= 32 or ch in '\n\r\t')
     
-    # Remove possíveis comandos shell maliciosos
-    dangerous = ['`', '$', '${', '$(', '|', ';', '&&', '||']
-    for d in dangerous:
-        if d in text:
-            # Substitui por versão segura
-            text = text.replace(d, '')
-    
+    # Auditoria SEC-06: a blacklist de caracteres shell foi removida — o texto
+    # nunca vai para um shell e ela corrompia código legítimo. A proteção real
+    # está nos executores (lista de argumentos) e em core/security.
+
     # Limita tamanho
     return text[:4096]
 
@@ -70,7 +67,7 @@ def handle_shell_unified(
     console.print("[dim]🚀 Iniciando FLAI Unified REPL...[/dim]")
     if model:
         model = sanitize_user_input(model)
-    run_unified_repl(project_path, model)
+    run_unified_repl(project_path, model, session)
 
     from flai.cli.utils.ollama_manager import cleanup_ollama
     cleanup_ollama()

@@ -136,7 +136,13 @@ class FlaiConfig(BaseModel):
     # Modelo
     model: str = Field(default="flai-coder", min_length=1, max_length=100)
     temperature: float = Field(default=0.7, ge=0.0, le=2.0)
-    max_tokens: int = Field(default=2048, ge=1, le=32000)
+    # Tamanho máximo da resposta (num_predict do Ollama)
+    max_tokens: int = Field(default=512, ge=32, le=32000)
+    # Janela de contexto (num_ctx). O FLAI reduz automaticamente se a RAM não suportar
+    # e avisa quando um prompt precisa de mais — aumente aqui nesse caso.
+    context_tokens: int = Field(default=2048, ge=512, le=131072)
+    # Usa um modelo derivado "flai-<base>:ctx<N>" com contexto reduzido (menos RAM)
+    use_optimized_model: bool = Field(default=True)
     
     # RAG
     rag: RAGConfig = Field(default_factory=RAGConfig)
@@ -172,8 +178,9 @@ class FlaiConfig(BaseModel):
     def validate_model_name(cls, v: str) -> str:
         """Valida nome do modelo"""
         import re
-        if not re.match(r'^[a-zA-Z0-9:_\-]+$', v):
-            raise ValueError(f'Nome de modelo inválido: {v}. Use apenas letras, números, :, - e _')
+        # Nomes do Ollama: "qwen2.5-coder:7b", "library/model:tag"
+        if not re.fullmatch(r'[a-zA-Z0-9][a-zA-Z0-9._:/\-]{0,127}', v) or '..' in v:
+            raise ValueError(f'Nome de modelo inválido: {v}. Use letras, números, ., :, /, - e _')
         return v
     
     def to_json(self, indent: int = 2) -> str:
@@ -290,7 +297,8 @@ def create_default_config(project_path: Path, model: str = "flai-coder") -> Flai
         project_name=project_path.name,
         model=model,
         temperature=0.7,
-        max_tokens=2048,
+        max_tokens=512,
+        context_tokens=2048,
         rag=RAGConfig(),
         web_enabled=True,
         web_port=8080,

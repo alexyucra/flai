@@ -1,9 +1,29 @@
+# =============================================================================
+# FLAI — Configuração de modelo EXTERNO / novo modelo (RESERVADO)
+# =============================================================================
+#
+# ⚠️  ESTE ARQUIVO AINDA NÃO É USADO PELO FLAI.
+#
+# Ele fica visível como referência para configurar, no futuro, um modelo novo
+# ou um provedor externo (ex.: Groq). Até o FLAI estar finalizado:
+#
+#   - o FLAI usa SOMENTE o Ollama local (http://localhost:11434);
+#   - nenhum código ou prompt sai da máquina;
+#   - mesmo com `enabled: true`, provedores externos continuam bloqueados.
+#
+# Privacidade: enviar código corporativo a um provedor externo exige
+# autorização prévia da TI (IT-TI-001 / POL-TI-001).
+# =============================================================================
+
+status: reserved          # reserved = não utilizado pelo FLAI nesta versão
+
 ia:
-  enabled: true
-  provider: groq
+  enabled: false          # manter false até o FLAI estar finalizado
+  provider: groq          # provedor externo de exemplo
   model: llama3-8b-8192
   temperature: 0.2
   max_tokens: 800
+  # A chave NUNCA vai neste arquivo. Use a variável de ambiente GROQ_API_KEY.
 
 limits:
   session_tokens: 3000

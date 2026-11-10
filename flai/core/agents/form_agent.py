@@ -7,6 +7,7 @@ Form Agent - Especialista em criação de formulários
 from pathlib import Path
 from typing import Dict, List, Optional
 from flai.cli.console.console import console
+from flai.core.security import safe_name, safe_join, UnsafePathError
 
 class FormAgent:
     def __init__(self, project_path: Optional[Path] = None):
@@ -21,7 +22,11 @@ class FormAgent:
         if not fields:
             fields = ["nome", "email"]
         
-        form_path = self.project_path / "forms" / f"{form_name}.py"
+        try:
+            form_path = safe_join(self.project_path, "forms", f"{safe_name(form_name)}.py")
+        except UnsafePathError as e:
+            console.print(f"[red]❌ {e}[/red]")
+            return {"success": False, "error": str(e), "type": "error"}
         form_path.parent.mkdir(parents=True, exist_ok=True)
         
         # Construindo o código linha por linha para evitar problemas de f-string

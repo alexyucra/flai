@@ -5,7 +5,6 @@ import click
 import json
 from pathlib import Path
 from flai.cli.commands.init import handle_init
-from flai.source.shell import handle_shell
 from flai.cli.console.console import console
 from flai.cli.console import Table, Panel, Text, box, Rule
 import traceback
