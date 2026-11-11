@@ -69,3 +69,4 @@ env.local
 /app
 .python-version
 /source
+/demo

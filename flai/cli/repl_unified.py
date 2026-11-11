@@ -187,7 +187,10 @@ class FLAIUnifiedREPL:
         self._load_config()
         
         # Confirmação antes de ações que alteram o projeto ou executam código dele
-        self.router = RouterAgent(self.project_path, model=self.model, confirm=self._confirm)
+        self._status = None  # spinner ativo; para antes de qualquer pergunta ao usuário
+        self._prompt = None  # PromptSession (prompt_toolkit) criado sob demanda
+        self.router = RouterAgent(self.project_path, model=self.model, confirm=self._confirm,
+                                  ask=self._ask)
         self.rag = get_rag(self.project_path, auto_index=True)     # ✅ Compartilhado
         self.agent_manager = get_agent_manager(self.project_path)  # ✅ Compartilhado
         self.context_manager = get_context_manager(self.project_path)  # ✅ Compartilhado
@@ -200,11 +203,57 @@ class FLAIUnifiedREPL:
         # Cache para evitar verificações repetidas
         self._initialized = False
     
-    @staticmethod
-    def _confirm(question: str) -> bool:
+    SLASH_COMMANDS = ["/help", "/contexto", "/desfazer", "/history", "/export", "/clear",
+                      "/tokens", "/tokens refresh", "/rag index", "/rag search", "/exit"]
+
+    async def _read_input(self) -> str:
+        """prompt_toolkit (histórico em disco + autocompletar) com fallback para input simples."""
+        if self._prompt is None:
+            try:
+                from prompt_toolkit import PromptSession
+                from prompt_toolkit.history import FileHistory
+                from prompt_toolkit.completion import WordCompleter
+                hist = self.project_path / ".flai" / "input_history"
+                hist.parent.mkdir(parents=True, exist_ok=True)
+                words = self.SLASH_COMMANDS + ["criar crud de", "fleting"] + self.router._entities()
+                self._prompt = PromptSession(history=FileHistory(str(hist)),
+                                             completer=WordCompleter(words, sentence=True))
+            except ImportError:
+                self._prompt = False
+        if self._prompt:
+            from prompt_toolkit.formatted_text import HTML
+            pending = self.router.session.pending
+            if pending:
+                console.print(f"[dim]↪ responda à pergunta acima (s/n) ou peça outra coisa[/dim]")
+            return await self._prompt.prompt_async(HTML("\n<ansicyan><b>💬 Você</b></ansicyan>: "))
+        return console.input("\n[bold cyan]💬 Você[/bold cyan]: ")
+
+    def _show_context(self):
+        s = self.router.session
+        console.print("[bold cyan]🧭 Contexto da conversa[/bold cyan]")
+        console.print(f"  foco: {s.focus_entity or '-'}")
+        console.print(f"  arquivos recentes: {', '.join(s.recent_files) or '-'}")
+        console.print(f"  memória: {len(s.history) // 2} troca(s) (máx. {s.max_turns})")
+        console.print(f"  pergunta pendente: {s.pending or '-'}")
+        changed = self.router.toolbox.changed_files
+        console.print(f"  alterados nesta sessão: {', '.join(changed) or '-'}")
+
+    def _pause_spinner(self):
+        if self._status is not None:
+            self._status.stop()
+
+    def _confirm(self, question: str) -> bool:
         from rich.markup import escape
+        self._pause_spinner()  # senão o spinner sobrescreve a pergunta
         answer = console.input(f"[yellow]⚠️ {escape(question)} \\[s/N]: [/yellow]").strip().lower()
         return answer in ("s", "sim", "y", "yes")
+
+    def _ask(self, question: str, default: str = "") -> str:
+        from rich.markup import escape
+        self._pause_spinner()
+        hint = f" \\[{escape(default)}]" if default else ""
+        answer = console.input(f"[cyan]❓ {escape(question)}{hint}: [/cyan]").strip()
+        return answer or default
 
     def _load_config(self):
         """Carrega configuração do projeto"""
@@ -238,6 +287,7 @@ class FLAIUnifiedREPL:
         
         # RAM e limites de tokens: usa modelo derivado com contexto reduzido
         self._prepare_tokens()
+        self.router.warmup_async()  # carrega o modelo + system prompt enquanto o usuário digita
 
         # Mostra status do RAG
         rag_stats = self.rag.get_stats()
@@ -295,7 +345,9 @@ class FLAIUnifiedREPL:
 ║      • onde está <código/busca>                                     ║
 ║      • criar página <nome> | criar model <nome>                     ║
 ║      • fleting <comando>  (ex.: fleting list pages, fleting doctor) ║
-║      • perguntas livres com '?' vão para a IA local                 ║
+║      • converse livremente: a IA lê, edita (com diff) e lembra      ║
+║      • /contexto        - Foco, memória e arquivos recentes         ║
+║      • /desfazer        - Reverte a última alteração de arquivo     ║
 ║      • /help            - Mostra ajuda completa                     ║
 ║      • /history         - Mostra histórico da sessão                ║
 ║      • /export          - Exporta histórico para Markdown           ║
@@ -340,6 +392,17 @@ class FLAIUnifiedREPL:
         
         elif command == 'clear':
             self.history.clear()
+            self.router.session.clear()
+            console.print("[dim]🧹 Memória da conversa limpa[/dim]")
+            return True
+
+        elif command in ('contexto', 'context'):
+            self._show_context()
+            return True
+
+        elif command in ('desfazer', 'undo'):
+            msg = self.router.undo()
+            console.print(f"[green]{msg}[/green]" if msg else "[dim]Nada para desfazer[/dim]")
             return True
 
         elif command == 'tokens':
@@ -482,8 +545,8 @@ class FLAIUnifiedREPL:
         
         while self.running:
             try:
-                # Input do usuário
-                user_input = console.input("\n[bold cyan]💬 Você[/bold cyan]: ").strip()
+                # Input do usuário (↑ histórico, Tab autocompleta comandos/entidades)
+                user_input = (await self._read_input()).strip()
                 
                 if not user_input:
                     continue
@@ -493,17 +556,35 @@ class FLAIUnifiedREPL:
                     self._handle_command(user_input)
                     continue
                 
-                # Processa com RAG se necessário
-                enhanced_input = self._process_with_rag(user_input)
-                
-                # Mostra indicador de processamento
-                with console.status("[dim]🤔 Pensando..."):
-                    # Roteia para o agente apropriado
+                # O router monta o contexto (RAG incluso) sem alterar o texto do usuário,
+                # para o histórico da conversa guardar a pergunta original.
+                enhanced_input = user_input
+
+                # Spinner até o primeiro token; depois o texto aparece enquanto é gerado
+                status = console.status("[dim]🤔 Pensando...")
+                status.start()
+                self._status = status
+                started = []
+
+                def on_token(chunk: str):
+                    if not started:
+                        status.stop()
+                        console.print("\n[bold green]🤖 FLAI:[/bold green]")
+                        console.print("─" * 60)
+                        started.append(True)
+                    console.out(chunk, end="", highlight=False)
+
+                self.router.on_token = on_token
+                try:
                     result = await self.router.route(enhanced_input)
+                finally:
+                    status.stop()
+                    self._status = None
+                    self.router.on_token = None
 
                 if not isinstance(result, dict):
                     result = {"type": "unknown", "content": str(result)}
-                
+
                 # Formata resposta para exibição
                 response_text = self._format_result(result)
                 
@@ -516,8 +597,13 @@ class FLAIUnifiedREPL:
                 }
                 self.history.add_entry(user_input, response_text, metadata)
                 
-                # Exibe resposta
-                self._display_response(response_text, result.get("type"))
+                # Exibe resposta (se veio por streaming, já está na tela: só as notas)
+                if result.get("streamed") and started:
+                    console.print("\n" + "─" * 60)
+                    for note in result.get("notes", []):
+                        console.print(f"[dim]{note}[/dim]")
+                else:
+                    self._display_response(response_text, result.get("type"))
                 
             except KeyboardInterrupt:
                 console.print("\n[yellow]⚠️ Interrompido. Digite /exit para sair[/yellow]")

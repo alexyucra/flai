@@ -59,7 +59,24 @@ def test_crud_full_flow(router, project):
     assert (project / "app/views/pages/produtos_view.py").exists()
     assert list((project / "migrations").glob("*_produtos.py"))
     assert (project / "data/fleting.db").exists()
-    assert any("db migrate" in q for q in router.asked)
+    # Uma única confirmação para o plano inteiro (que inclui o db migrate)
+    assert sum("Executar o plano" in q for q in router.asked) == 1
+    assert not any("db migrate" in q for q in router.asked)
+    # Verificação: tabela criada com os campos pedidos
+    import sqlite3
+    cols = [c[1] for c in sqlite3.connect(project / "data/fleting.db")
+            .execute("PRAGMA table_info(produtos)").fetchall()]
+    assert cols == ["id", "nome", "preco"]
+
+
+def test_crud_is_idempotent(router, project):
+    """Repetir o pedido não duplica migrations nem pede confirmação de novo."""
+    before = sorted(p.name for p in (project / "migrations").glob("*_produtos.py"))
+    asked = len(router.asked)
+    r = route(router, "criar crud de produtos com nome, preco")
+    assert r["success"]
+    assert sorted(p.name for p in (project / "migrations").glob("*_produtos.py")) == before
+    assert len(router.asked) == asked
 
 
 def test_create_page_and_list(router, project):
@@ -78,11 +95,27 @@ def test_name_normalization_and_blocking(router, project):
 
 @pytest.mark.skipif(MODEL not in _ollama_models(), reason=f"Ollama/modelo {MODEL} indisponível")
 def test_local_llm_with_token_plan(router):
-    plan = router.prepare_model(context_tokens=2048, max_tokens=256)
+    from flai.core.assistant.assistant import MIN_ASSISTANT_CTX
+    plan = router.prepare_model(context_tokens=MIN_ASSISTANT_CTX, max_tokens=256)
     if not plan.fits:
         pytest.skip("RAM insuficiente: " + " ".join(plan.warnings))
     assert router.model.startswith("flai-")          # modelo filtrado criado/usado
     r = route(router, "o que faz o produtos_controller?")
     assert r["type"] == "llm_response" and r["success"], r
     assert r["tokens"]["prompt"] > 0
-    assert r["tokens"]["prompt"] + r["tokens"]["output"] <= plan.effective_ctx
+    # "prompt" é o maior passo do loop de ferramentas: nunca pode estourar o contexto
+    # (o Ollama cortaria o início do prompt, isto é, o system)
+    assert r["tokens"]["prompt"] < plan.effective_ctx
+    # Memória: o turno ficou no histórico da sessão
+    assert any("produtos_controller" in m["content"] for m in router.session.history)
+
+
+def test_undo_restores_file(router, project):
+    ctrl = project / "app/controllers/produtos_controller.py"
+    original = ctrl.read_text(encoding="utf-8")
+    out = router.toolbox.run("escrever_metodo", {"caminho": "app/controllers/produtos_controller.py",
+                                                  "codigo": "def contar(self):\n        return 0"})
+    assert out.startswith("OK"), out
+    assert "    def contar(self):\n        return 0" in ctrl.read_text(encoding="utf-8")
+    assert router.undo()
+    assert ctrl.read_text(encoding="utf-8") == original

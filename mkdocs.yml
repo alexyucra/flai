@@ -1,0 +1,84 @@
+site_name: FLAI Docs
+site_description: Framework Local de IA para projetos Fleting (Python + Flet) com modelos locais via Ollama
+site_url: https://alexyucra.github.io/flai/
+repo_url: https://github.com/alexyucra/flai
+repo_name: alexyucra/flai
+edit_uri: edit/master/docs/
+copyright: Licença MIT · FLAI
+
+theme:
+  name: material
+  language: pt-BR
+  icon:
+    logo: material/robot-outline
+    repo: fontawesome/brands/github
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: teal
+      toggle:
+        icon: material/weather-night
+        name: Modo escuro
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: teal
+      toggle:
+        icon: material/weather-sunny
+        name: Modo claro
+  features:
+    - navigation.sections
+    - navigation.indexes
+    - navigation.top
+    - navigation.footer
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.tabs.link
+    - content.action.edit
+    - toc.follow
+
+nav:
+  - Início: index.md
+  - Primeiros passos:
+      - Instalação: pt/instalacao.md
+      - Comandos (CLI): pt/cli.md
+      - Configuração: pt/configuracao.md
+  - Usando o FLAI:
+      - Assistente: pt/assistente.md
+      - Geradores (CRUD, listagem, Fleting): pt/geradores.md
+      - Modelos e desempenho: pt/modelos.md
+  - Referência:
+      - Arquitetura: pt/arquitetura.md
+      - Segurança: pt/seguranca.md
+      - Solução de problemas: pt/solucao-de-problemas.md
+      - Status e roadmap: pt/checklist.md
+  - Contribuir: pt/contribuir.md
+
+validation:
+  links:
+    anchors: warn   # com --strict, âncora quebrada (pagina.md#secao) falha o build
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+
+plugins:
+  - search:
+      lang: pt

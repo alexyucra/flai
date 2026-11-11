@@ -241,12 +241,7 @@ class IntentManager:
             IntentDefinition(
                 name="exit",
                 description="Sai do programa",
-                patterns=[
-                    r"sair",
-                    r"exit",
-                    r"quit",
-                    r"q"
-                ],
+                patterns=[r"^(?:sair|exit|quit|q)$"],  # frase inteira (r"q" casava "verifique")
                 keywords=["sair", "exit", "quit", "q"],
                 requires_entity=False,
                 examples=["sair", "exit", "q"],

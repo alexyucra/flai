@@ -92,9 +92,6 @@ def config_show(key: Optional[str] = None):
                 console.print(f"[yellow]Chave '{key}' não encontrada[/yellow]")
         else:
             console.print("[bold cyan]📋 Configuração do FLAI[/bold cyan]")
-            # for k, v in config.items():
-            #     console.print(f"  [green]{k}:[/green] {v}")
-            console.print("[bold cyan]📋 Configuração do FLAI[/bold cyan]")
             console.print(f"  [green]versão:[/green] {config.version}")
             console.print(f"  [green]projeto:[/green] {config.project_name}")
             console.print(f"  [green]modelo:[/green] {config.model}")

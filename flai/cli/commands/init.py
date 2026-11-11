@@ -101,16 +101,17 @@ def handle_init(model_arg: str = None, path: str = ".", verbose: bool = False) -
 
         # Opções baseadas na RAM disponível
         if ram_gb < 4:
-            model_table.add_row("1", "deepseek-coder:1.3b", "1.5GB RAM", "Ultra-leve / Código")
-            options = {"1": "deepseek-coder:1.3b"}
+            model_table.add_row("1", "qwen2.5-coder:1.5b", "1.5GB RAM", "Ultra-leve / Código")
+            model_table.add_row("2", "qwen2.5-coder:3b", "2.5GB RAM", "Código + instruções (PT-BR)")
+            options = {"1": "qwen2.5-coder:1.5b", "2": "qwen2.5-coder:3b"}
         else:
-            model_table.add_row("1", "llama3.2:3b", "4GB RAM", "Equilibrado / Chat")
-            model_table.add_row("2", "phi3:mini", "4GB RAM", "Rápido / Lógica")
-            model_table.add_row("3", "deepseek-coder:1.3b", "1.5GB RAM", "Especialista em Código")
+            model_table.add_row("1", "qwen2.5-coder:3b", "2.5GB RAM", "Recomendado / Código + PT-BR")
+            model_table.add_row("2", "qwen2.5-coder:1.5b", "1.5GB RAM", "Mais rápido / Código")
+            model_table.add_row("3", "llama3.2:3b", "3GB RAM", "Chat geral")
             options = {
-                "1": "llama3.2:3b",
-                "2": "phi3:mini",
-                "3": "deepseek-coder:1.3b"
+                "1": "qwen2.5-coder:3b",
+                "2": "qwen2.5-coder:1.5b",
+                "3": "llama3.2:3b"
             }
 
         console.print(model_table)

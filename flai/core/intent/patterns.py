@@ -249,36 +249,20 @@ class IntentPatterns:
         ],
         
         # ========== AJUDA (MANTIDO) ==========
+        # Comandos de controle: só a frase INTEIRA (^...$). Sem âncora, r"q" casava
+        # com "verifique" e r"\?" com qualquer pergunta — que deve ir para o LLM.
         "help": [
-            r"ajuda",
-            r"help",
-            r"\?",
-            r"comandos",
-            r"commands",
-            r"o que (?:você|vc) (?:faz|sabe fazer)",
-            r"como\s+usar",
-            r"como\s+funciona",
-            r"me\s+ajuda",
-            r"preciso\s+de\s+ajuda",
-            r"quais\s+comandos",
-            r"mostrar\s+comandos",
-            r"show\s+commands",
+            r"^(?:ajuda|help|\?|comandos|commands)$",
+            r"^o que (?:você|voce|vc) (?:faz|sabe fazer)\??$",
+            r"^(?:me\s+ajuda|preciso\s+de\s+ajuda)$",
+            r"^(?:quais|mostrar|show)\s+(?:comandos|commands)\??$",
         ],
-        
-        # ========== SAIR (MANTIDO) ==========
+
+        # ========== SAIR ==========
         "exit": [
-            r"sair",
-            r"exit",
-            r"quit",
-            r"q",
-            r"sair do programa",
-            r"fechar",
-            r"close",
-            r"encerrar",
-            r"terminar",
-            r"at[eé]\s+logo",
-            r"tchau",
-            r"bye",
+            r"^(?:sair|exit|quit|q|fechar|close|encerrar|terminar|tchau|bye)$",
+            r"^sair do programa$",
+            r"^at[eé]\s+logo$",
         ],
     }
     

@@ -390,8 +390,15 @@ class AgentManager:
                 module = importlib.import_module(validate_module_path(agent_def.module_path))
             agent_class = getattr(module, agent_def.class_name)
             
-            # Instancia o agente
-            agent_instance = agent_class(self.project_path, agent_def.config)
+            # Instancia o agente. Os embutidos têm assinaturas diferentes: CRUDAgent/DBAgent
+            # recebem `confirm` na 2ª posição, Form/ProjectAgent só o caminho. O dict de
+            # config só é passado para quem declara um parâmetro `config`.
+            import inspect
+            params = inspect.signature(agent_class.__init__).parameters
+            if "config" in params:
+                agent_instance = agent_class(self.project_path, config=agent_def.config)
+            else:
+                agent_instance = agent_class(self.project_path)
             self.agent_instances[agent_name] = agent_instance
             self.loaded_agents[agent_name] = agent_instance
             
