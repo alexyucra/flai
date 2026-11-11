@@ -11,7 +11,7 @@ from typing import Optional, Dict, Any
 # import platform
 from flai.core.platform import (
     get_platform, is_windows, is_linux, is_macos,
-    get_user_cache_dir, normalize_path, Platform
+    get_user_cache_dir
 )
 from .cache import cache
 
@@ -591,9 +591,8 @@ Não faça referência a arquivos ou pastas externas.
         """Garante que tudo está pronto para uso"""
         
         from flai.cli.console.console import console
-        from flai.core.platform import get_user_cache_dir
 
-        cache_dir = get_user_cache_dir()
+        get_user_cache_dir()  # garante a pasta de cache
         
         cache_key = f"ensure_ready_{model}"
         cached = cache.get(cache_key)
@@ -685,20 +684,6 @@ def get_ollama_manager() -> OllamaManager:
     if _ollama_manager is None:
         _ollama_manager = OllamaManager(auto_start=True)
     return _ollama_manager
-
-def run_ollama(model: str, prompt: str) -> str:
-    """Função principal para executar modelos (usada pelo FLAI)"""
-    manager = get_ollama_manager()
-    
-    # Tentar via API primeiro
-    response = manager.run_model(model, prompt)
-    
-    # Se falhar, tentar CLI
-    if response.startswith("Erro:"):
-        logger.error("⚠ API falhou, tentando CLI...")
-        response = manager.run_model_cli(model, prompt)
-    
-    return response
 
 def cleanup_ollama():
     """Limpeza global do Ollama"""

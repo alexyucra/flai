@@ -1,12 +1,11 @@
 import sys
-import typer
 from typing import Optional
 import click
 import json
 from pathlib import Path
 from flai.cli.commands.init import handle_init
 from flai.cli.console.console import console
-from flai.cli.console import Table, Panel, Text, box, Rule
+from flai.cli.console import Table, Panel, box
 import traceback
 from flai.core.logging import setup_logging, get_logger
 

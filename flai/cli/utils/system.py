@@ -1,6 +1,5 @@
 import psutil
 import platform
-import sys
 
 def get_os():
     """Retorna o nome do sistema operacional em minúsculas"""

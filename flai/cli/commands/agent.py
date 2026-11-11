@@ -3,10 +3,8 @@
 Comandos para gerenciar agentes do FLAI
 """
 import typer
-from pathlib import Path
-from typing import Optional
 
-from flai.core.agents.agent_manager import AgentManager, AgentType
+from flai.core.agents.agent_manager import AgentManager
 from flai.cli.console.console import console
 from rich.table import Table
 

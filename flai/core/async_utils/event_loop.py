@@ -3,7 +3,7 @@ Gerenciamento de event loops para execução assíncrona segura
 """
 import asyncio
 import threading
-from typing import TypeVar, Callable, Any, Optional
+from typing import TypeVar, Any, Optional
 import functools
 
 T = TypeVar('T')
@@ -48,8 +48,8 @@ def run_async(coro, timeout: Optional[int] = None) -> Any:
         >>> result = run_async(my_async_function())
     """
     try:
-        # Tenta obter loop existente
-        loop = asyncio.get_running_loop()
+        # Levanta RuntimeError se não há loop rodando
+        asyncio.get_running_loop()
         
         # Se já há loop rodando, precisamos de uma nova thread
         # (situação rara no FLAI)

@@ -2,7 +2,6 @@
 """Módulo core do FLAI - Agents, Intent, Generators, Executors"""
 
 from pathlib import Path
-from typing import Optional
 
 from flai.core.registry import register_component, get_component, ComponentRegistry
 from flai.core.agents.agent_manager import AgentManager

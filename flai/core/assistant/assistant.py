@@ -35,6 +35,9 @@ ASSISTANT_RULES = """
   mostra o diff e pede a confirmação do usuário.
 - Listagem/tabela de registros numa view: use criar_listagem(entidade).
 - Para criar CRUD/tabela use criar_crud. Para comandos Fleting use a ferramenta fleting.
+- Implemente POR DOMÍNIO e nesta ordem: migração → model → controller → view (+rota) →
+  verificação. Antes, veja o que existe com fleting "list pages" (e "list routes").
+  Cada domínio no seu arquivo: regra de dados no model/controller, tela só na view.
 - Se uma ferramenta retornar ERRO, corrija e tente de novo (no máximo uma vez).
 - Se faltar informação essencial, faça UMA pergunta objetiva e pare.
 - Ao concluir uma ação, termine com UMA sugestão curta de próximo passo, em forma de

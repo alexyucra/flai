@@ -6,7 +6,6 @@ Project Agent - Contexto e análise do projeto
 """
 from pathlib import Path
 from typing import Dict, List, Optional, Any
-import sys
 
 class ProjectAgent:
     def __init__(self, project_path: Optional[Path] = None):

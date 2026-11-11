@@ -13,46 +13,59 @@ criar crud de produtos com os campos: nome, preco:float, estoque:int
 Também é acionado pelo assistente (ferramenta `criar_crud`) quando você pede algo como
 "vamos construir um crud de clientes".
 
-### Fluxo: diagnosticar → planejar → confirmar → executar → verificar
+### Fluxo por domínio
+
+O CRUD é implementado **por domínio**, sempre nesta ordem, e cada etapa só roda se faltar:
+
+| # | Domínio | O que faz |
+|---|---|---|
+| 1 | Diagnóstico | Equivalente a `fleting list pages` (model, controller, view, rota) + migrations e tabela |
+| 2 | Migração | `fleting db init` (se preciso) · `fleting db make <nome>` + `CREATE TABLE` · `fleting db migrate` |
+| 3 | Model | `fleting create model <nome>` |
+| 4 | Controller | `fleting create controller <nome>` + métodos `listar`, `buscar`, `criar`, `atualizar`, `excluir` |
+| 5 | View + rota | `fleting create page <nome>`: com model e controller prontos, cria só a view e registra a rota |
+| 6 | Verificação | `fleting list pages` de novo, migration aplicada, tabela no SQLite, sintaxe dos arquivos |
 
 ```mermaid
 flowchart TD
-    D[Diagnóstico<br/>página? migrations? banco? tabela?] -->|tabela já existe| N[Nada a fazer]
+    D[Diagnóstico<br/>list pages · migrations · tabela] -->|tudo existe| N[Nada a fazer]
     D --> C{Campos informados?}
-    C -->|não| Q[Pergunta os campos<br/>com sugestão]
+    C -->|não| Q[Pergunta os campos]
     C -->|sim| P
-    Q --> P[Plano: só o que falta]
+    Q --> P[Plano por domínio: só o que falta]
     P --> K{Executar o plano?}
     K -->|não| X[Cancelado]
-    K -->|sim| E[create page · db init · db make<br/>CREATE TABLE · db migrate]
-    E --> V[Verificação<br/>view · migration aplicada · tabela]
-    V --> S[Sugere: criar a listagem?]
+    K -->|sim| M[Migração] --> MO[Model] --> CT[Controller] --> V[View + rota]
+    V --> VE[Verificação] --> S[Sugere: criar a listagem?]
 ```
 
-1. **Diagnóstico**: verifica se a página já existe, se há migrations da entidade (aplicadas
-   ou pendentes, vazias ou com código), se o banco foi inicializado e se a tabela existe.
-   Repetir o pedido **não duplica nada**.
-2. **Campos**: se não vierem no pedido, o FLAI pergunta e sugere uma lista.
-3. **Plano**: mostra só os passos que faltam e avisa sobre migrations duplicadas e vazias.
-4. **Uma confirmação** para o plano inteiro, incluindo o `fleting db migrate`.
-5. **Execução** e **verificação**: arquivo da view, registro em `_fleting_migrations` e a
-   tabela no SQLite.
+- Repetir o pedido **não duplica nada**; se só falta a rota ou os métodos do controller, o
+  plano tem só essa etapa.
+- **Uma confirmação** para o plano inteiro, incluindo o `fleting db migrate`.
+- Os campos só são pedidos se a tabela ainda não existe.
 
 ```text
+  fleting list pages → produtos: model —  controller —  view —  route —
 📋 Plano: CRUD 'produtos'
-  tabela: id, nome VARCHAR(255), preco REAL, estoque INTEGER
-  1. fleting create page produtos
-  2. fleting db make produtos  + CREATE TABLE
-  3. fleting db migrate
+  tabela: id, nome VARCHAR(255), preco REAL
+  1. migração: fleting db make produtos + CREATE TABLE
+  2. migração: fleting db migrate
+  3. model: fleting create model produtos
+  4. controller: fleting create controller produtos
+  5. controller: métodos listar, buscar, criar, atualizar, excluir
+  6. view: fleting create page produtos (view e rota)
+  7. verificação: fleting list pages, migration, tabela e sintaxe
 ⚠️ Executar o plano? [s/N]: s
-  ✅ fleting create page produtos
   ✅ fleting db make produtos
-  ✅ 002_produtos.py: CREATE TABLE produtos
+  ✅ 004_produtos.py: CREATE TABLE produtos
   ✅ fleting db migrate
+  ✅ fleting create model produtos
+  ✅ fleting create controller produtos
+  ✅ produtos_controller: métodos CRUD
+  ✅ fleting create page produtos
 🔎 Verificação
-  ✅ app/views/pages/produtos_view.py
-  ✅ migration 002_produtos.py aplicada
-  ✅ tabela 'produtos' no banco
+  fleting list pages → produtos: model ✔  controller ✔  view ✔  route ✔
+  ✅ 10 verificações ok
 Quer que eu crie a listagem de produtos na produtos_view?
 ```
 

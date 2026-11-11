@@ -4,7 +4,7 @@
 Integração do RAG com o fluxo principal do FLAI
 """
 from pathlib import Path
-from typing import Optional, List, Dict, Any
+from typing import List, Dict, Any
 from .rag_manager import RAGManager
 
 class IntegratedRAG:

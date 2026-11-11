@@ -37,13 +37,6 @@ class Session:
     def messages(self) -> List[Dict[str, str]]:
         return list(self.history)
 
-    def drop_oldest(self) -> bool:
-        """Remove a troca mais antiga (usado quando o contexto não cabe)."""
-        if len(self.history) >= 2:
-            del self.history[:2]
-            return True
-        return False
-
     def clear(self) -> None:
         self.history.clear()
         self.recent_files.clear()

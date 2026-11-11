@@ -2,22 +2,16 @@
 """
 REPL Unificado do FLAI com Suporte a RAG e Histórico Markdown
 """
-import sys
-import uuid
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 import asyncio
 
-from flai.core import get_agent_manager, get_rag, get_context_manager, get_ollama, get_intent_manager
+from flai.core import get_agent_manager, get_rag, get_context_manager, get_ollama
 from flai.core.agents.router_agent import RouterAgent
-from flai.core.rag.integrated_rag import IntegratedRAG
 from flai.core.project import get_project_root
-from flai.core.types import RouteResult, ResultType, IntentType
+from flai.core.types import RouteResult, ResultType
 from flai.cli.console.console import console
-from flai.core.project import get_project_root
-from flai.cli.utils.ollama_manager import get_ollama_manager
-from flai.cli.utils.cache import cache
 from flai.core.security import safe_name, safe_join
 
 class ConversationHistory:
@@ -42,9 +36,6 @@ class ConversationHistory:
     def _load_existing(self):
         """Carrega conversa existente se o arquivo já existe"""
         if self.session_file.exists():
-            content = self.session_file.read_text(encoding='utf-8')
-            # Parse simples do markdown para extrair conversa
-            # (implementação simplificada, pode ser expandida)
             console.print(f"[dim]📜 Carregando sessão existente: {self.session_name}[/dim]")
     
     def add_entry(self, user_input: str, assistant_response: str, metadata: Optional[Dict] = None):
@@ -515,26 +506,6 @@ class FLAIUnifiedREPL:
             # Mostra preview da resposta
             response_preview = entry['assistant'][:100] + "..." if len(entry['assistant']) > 100 else entry['assistant']
             console.print(f"   [bold green]🤖 FLAI:[/bold green] {response_preview}\n")
-    
-    def _process_with_rag(self, user_input: str) -> str:
-        """
-        Processa entrada com RAG se necessário
-        
-        Returns:
-            Resposta enriquecida com contexto RAG
-        """
-        # Verifica se a pergunta se beneficia de RAG
-        rag_keywords = ['onde', 'cadê', 'buscar', 'procurar', 'encontrar', 
-                       'como funciona', 'explique', 'mostre', 'analise']
-        
-        should_use_rag = any(keyword in user_input.lower() for keyword in rag_keywords)
-        
-        if should_use_rag and self.rag.get_stats().get("exists"):
-            console.print("[dim]🔍 Buscando contexto relevante no código...[/dim]")
-            enhanced_query = self.rag.enhance_query(user_input)
-            return enhanced_query
-        
-        return user_input
     
     async def run(self):
         """Executa o REPL principal"""

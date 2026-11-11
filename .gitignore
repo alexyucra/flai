@@ -70,3 +70,5 @@ env.local
 .python-version
 /source
 /demo
+# MkDocs build
+site/

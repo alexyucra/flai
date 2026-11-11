@@ -5,10 +5,9 @@ Comando para gerenciar configuração do FLAI via interface (web ou terminal)
 import typer
 from pathlib import Path
 from typing import Optional
-import webbrowser
 import json
 
-from flai.core.config import create_default_config, load_config, validate_config, FlaiConfig
+from flai.core.config import create_default_config, load_config, FlaiConfig
 from flai.cli.console.console import console
 from flai.core.project import get_project_root
 from pydantic import ValidationError

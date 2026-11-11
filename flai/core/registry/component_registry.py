@@ -2,7 +2,7 @@
 Registro central de componentes - Evita duplicação de instâncias
 """
 from pathlib import Path
-from typing import Dict, Any, Optional, Type, TypeVar, Callable
+from typing import Dict, Any, Optional, TypeVar, Callable
 import threading
 
 T = TypeVar('T')

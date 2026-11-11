@@ -3,8 +3,6 @@ Tipos comuns usados em todo o FLAI
 """
 from typing import TypedDict, Optional, List, Dict, Any, Union, Callable
 from enum import Enum
-from pathlib import Path
-from datetime import datetime
 
 # ============================================================
 # ENUMS
@@ -157,38 +155,3 @@ class AgentContext(TypedDict, total=False):
 
 ProgressCallback = Callable[[str, int, Optional[int]], None]
 ErrorCallback = Callable[[str, Exception], None]
-
-
-# ============================================================
-# CONFIGURAÇÕES
-# ============================================================
-
-class ModelConfig(TypedDict):
-    """Configuração do modelo LLM"""
-    name: str
-    temperature: float
-    max_tokens: int
-    context_length: int
-
-
-class RAGConfig(TypedDict):
-    """Configuração do RAG"""
-    enabled: bool
-    chunk_size: int
-    chunk_overlap: int
-    embedding_model: str
-    max_results: int
-
-
-# ============================================================
-# UTILITÁRIOS
-# ============================================================
-
-def is_success_result(result: RouteResult) -> bool:
-    """Verifica se resultado indica sucesso"""
-    return result.get("success", False)
-
-
-def get_result_content(result: RouteResult) -> Any:
-    """Extrai conteúdo do resultado"""
-    return result.get("content", result.get("message", result.get("error", ""))) 

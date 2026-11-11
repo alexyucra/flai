@@ -1,7 +1,6 @@
 # flai/cli/__init__.py
 """CLI do FLAI"""
 
-import sys
 from pathlib import Path
 
 def setup_cli_logging(verbose: bool = False):

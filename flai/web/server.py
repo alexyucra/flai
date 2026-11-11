@@ -6,8 +6,6 @@ import flet as ft
 import threading
 import webbrowser
 from pathlib import Path
-from typing import Optional, Dict, Any
-import json
 import os
 
 LOOPBACK_HOSTS = {"127.0.0.1", "localhost", "::1"}
@@ -324,7 +322,7 @@ class FLAIWebServer:
             triggers = [t.strip() for t in triggers_field.value.split(",")] if triggers_field.value else []
             
             if name:
-                from flai.core.agents.agent_manager import AgentDefinition, AgentType, AgentPriority
+                from flai.core.agents.agent_manager import AgentDefinition, AgentType
                 
                 agent_def = AgentDefinition(
                     name=name,
@@ -710,7 +708,6 @@ Campos: {', '.join(fields) if fields else 'Nenhum'}
             self.show_snackbar("Indexação concluída!")
             self.navigate_to("rag")
         
-        import threading
         threading.Thread(target=do_index, daemon=True).start()
     
     def clear_rag_index(self, e):

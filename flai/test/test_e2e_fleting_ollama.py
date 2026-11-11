@@ -67,6 +67,13 @@ def test_crud_full_flow(router, project):
     cols = [c[1] for c in sqlite3.connect(project / "data/fleting.db")
             .execute("PRAGMA table_info(produtos)").fetchall()]
     assert cols == ["id", "nome", "preco"]
+    # Todos os domínios, na ordem migração → model → controller → view (+rota)
+    order = [s["step"] for s in r["steps"] if s["step"] not in ("next",)]
+    assert order.index("db_migrate") < order.index("model") < order.index("controller") \
+        < order.index("page")
+    ctrl = (project / "app/controllers/produtos_controller.py").read_text(encoding="utf-8")
+    assert all(f"def {m}(" in ctrl for m in ("listar", "buscar", "criar", "atualizar", "excluir"))
+    assert '"path": "/produtos"' in (project / "configs/routes.py").read_text(encoding="utf-8")
 
 
 def test_crud_is_idempotent(router, project):

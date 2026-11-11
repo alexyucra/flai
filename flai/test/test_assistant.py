@@ -3,7 +3,6 @@ Testes do assistente conversacional (sem LLM): sessão, ferramentas, parsing e r
 
     .venv/Scripts/python -m pytest flai/test/test_assistant.py -q
 """
-from pathlib import Path
 
 import pytest
 
