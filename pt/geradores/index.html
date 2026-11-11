@@ -602,10 +602,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#fluxo-diagnosticar-planejar-confirmar-executar-verificar" class="md-nav__link">
+  <a href="#fluxo-por-dominio" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Fluxo: diagnosticar → planejar → confirmar → executar → verificar
+        Fluxo por domínio
       
     </span>
   </a>
@@ -952,10 +952,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#fluxo-diagnosticar-planejar-confirmar-executar-verificar" class="md-nav__link">
+  <a href="#fluxo-por-dominio" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Fluxo: diagnosticar → planejar → confirmar → executar → verificar
+        Fluxo por domínio
       
     </span>
   </a>
@@ -1045,43 +1045,87 @@ usar cada gerador.</p>
 </code></pre></div>
 <p>Também é acionado pelo assistente (ferramenta <code>criar_crud</code>) quando você pede algo como
 "vamos construir um crud de clientes".</p>
-<h3 id="fluxo-diagnosticar-planejar-confirmar-executar-verificar">Fluxo: diagnosticar → planejar → confirmar → executar → verificar<a class="headerlink" href="#fluxo-diagnosticar-planejar-confirmar-executar-verificar" title="Permanent link">&para;</a></h3>
+<h3 id="fluxo-por-dominio">Fluxo por domínio<a class="headerlink" href="#fluxo-por-dominio" title="Permanent link">&para;</a></h3>
+<p>O CRUD é implementado <strong>por domínio</strong>, sempre nesta ordem, e cada etapa só roda se faltar:</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Domínio</th>
+<th>O que faz</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Diagnóstico</td>
+<td>Equivalente a <code>fleting list pages</code> (model, controller, view, rota) + migrations e tabela</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Migração</td>
+<td><code>fleting db init</code> (se preciso) · <code>fleting db make &lt;nome&gt;</code> + <code>CREATE TABLE</code> · <code>fleting db migrate</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td>Model</td>
+<td><code>fleting create model &lt;nome&gt;</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td>Controller</td>
+<td><code>fleting create controller &lt;nome&gt;</code> + métodos <code>listar</code>, <code>buscar</code>, <code>criar</code>, <code>atualizar</code>, <code>excluir</code></td>
+</tr>
+<tr>
+<td>5</td>
+<td>View + rota</td>
+<td><code>fleting create page &lt;nome&gt;</code>: com model e controller prontos, cria só a view e registra a rota</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Verificação</td>
+<td><code>fleting list pages</code> de novo, migration aplicada, tabela no SQLite, sintaxe dos arquivos</td>
+</tr>
+</tbody>
+</table>
 <pre class="mermaid"><code>flowchart TD
-    D[Diagnóstico&lt;br/&gt;página? migrations? banco? tabela?] --&gt;|tabela já existe| N[Nada a fazer]
+    D[Diagnóstico&lt;br/&gt;list pages · migrations · tabela] --&gt;|tudo existe| N[Nada a fazer]
     D --&gt; C{Campos informados?}
-    C --&gt;|não| Q[Pergunta os campos&lt;br/&gt;com sugestão]
+    C --&gt;|não| Q[Pergunta os campos]
     C --&gt;|sim| P
-    Q --&gt; P[Plano: só o que falta]
+    Q --&gt; P[Plano por domínio: só o que falta]
     P --&gt; K{Executar o plano?}
     K --&gt;|não| X[Cancelado]
-    K --&gt;|sim| E[create page · db init · db make&lt;br/&gt;CREATE TABLE · db migrate]
-    E --&gt; V[Verificação&lt;br/&gt;view · migration aplicada · tabela]
-    V --&gt; S[Sugere: criar a listagem?]</code></pre>
-<ol>
-<li><strong>Diagnóstico</strong>: verifica se a página já existe, se há migrations da entidade (aplicadas
-   ou pendentes, vazias ou com código), se o banco foi inicializado e se a tabela existe.
-   Repetir o pedido <strong>não duplica nada</strong>.</li>
-<li><strong>Campos</strong>: se não vierem no pedido, o FLAI pergunta e sugere uma lista.</li>
-<li><strong>Plano</strong>: mostra só os passos que faltam e avisa sobre migrations duplicadas e vazias.</li>
+    K --&gt;|sim| M[Migração] --&gt; MO[Model] --&gt; CT[Controller] --&gt; V[View + rota]
+    V --&gt; VE[Verificação] --&gt; S[Sugere: criar a listagem?]</code></pre>
+<ul>
+<li>Repetir o pedido <strong>não duplica nada</strong>; se só falta a rota ou os métodos do controller, o
+  plano tem só essa etapa.</li>
 <li><strong>Uma confirmação</strong> para o plano inteiro, incluindo o <code>fleting db migrate</code>.</li>
-<li><strong>Execução</strong> e <strong>verificação</strong>: arquivo da view, registro em <code>_fleting_migrations</code> e a
-   tabela no SQLite.</li>
-</ol>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>📋 Plano: CRUD 'produtos'
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>  tabela: id, nome VARCHAR(255), preco REAL, estoque INTEGER
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>  1. fleting create page produtos
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>  2. fleting db make produtos  + CREATE TABLE
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>  3. fleting db migrate
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>⚠️ Executar o plano? [s/N]: s
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>  ✅ fleting create page produtos
-<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>  ✅ fleting db make produtos
-<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>  ✅ 002_produtos.py: CREATE TABLE produtos
-<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>  ✅ fleting db migrate
-<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>🔎 Verificação
-<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>  ✅ app/views/pages/produtos_view.py
-<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>  ✅ migration 002_produtos.py aplicada
-<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>  ✅ tabela 'produtos' no banco
-<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>Quer que eu crie a listagem de produtos na produtos_view?
+<li>Os campos só são pedidos se a tabela ainda não existe.</li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>  fleting list pages → produtos: model —  controller —  view —  route —
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>📋 Plano: CRUD 'produtos'
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>  tabela: id, nome VARCHAR(255), preco REAL
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>  1. migração: fleting db make produtos + CREATE TABLE
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>  2. migração: fleting db migrate
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>  3. model: fleting create model produtos
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>  4. controller: fleting create controller produtos
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>  5. controller: métodos listar, buscar, criar, atualizar, excluir
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>  6. view: fleting create page produtos (view e rota)
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>  7. verificação: fleting list pages, migration, tabela e sintaxe
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>⚠️ Executar o plano? [s/N]: s
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>  ✅ fleting db make produtos
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>  ✅ 004_produtos.py: CREATE TABLE produtos
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>  ✅ fleting db migrate
+<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>  ✅ fleting create model produtos
+<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>  ✅ fleting create controller produtos
+<a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>  ✅ produtos_controller: métodos CRUD
+<a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>  ✅ fleting create page produtos
+<a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a>🔎 Verificação
+<a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a>  fleting list pages → produtos: model ✔  controller ✔  view ✔  route ✔
+<a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a>  ✅ 10 verificações ok
+<a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a>Quer que eu crie a listagem de produtos na produtos_view?
 </code></pre></div>
 <h3 id="tipos-de-campo">Tipos de campo<a class="headerlink" href="#tipos-de-campo" title="Permanent link">&para;</a></h3>
 <p>Informe com <code>nome:tipo</code> ou deixe o FLAI inferir pelo nome:</p>
