@@ -1,6 +1,5 @@
 # test_ollama.py
 import subprocess
-import os
 
 def test_ollama():
     print("=== Teste do Ollama ===\n")
@@ -9,7 +8,7 @@ def test_ollama():
     print("1. Verificando instalação...")
     try:
         result = subprocess.run(["ollama", "--version"], 
-                              capture_output=True, text=True)
+                              capture_output=True, text=True, encoding="utf-8", errors="replace")
         if result.returncode == 0:
             print(f"   ✅ Versão: {result.stdout.strip()}")
         else:
@@ -21,7 +20,7 @@ def test_ollama():
     print("\n2. Verificando modelos...")
     try:
         result = subprocess.run(["ollama", "list"], 
-                              capture_output=True, text=True)
+                              capture_output=True, text=True, encoding="utf-8", errors="replace")
         print(result.stdout)
     except:
         print("   ❌ Não foi possível listar modelos")
@@ -33,7 +32,7 @@ def test_ollama():
         result = subprocess.run(
             ["ollama", "run", "phi3:mini", "Olá, como vai?"],
             capture_output=True,
-            text=True,
+            text=True, encoding="utf-8", errors="replace",
             timeout=30
         )
         if result.returncode == 0:

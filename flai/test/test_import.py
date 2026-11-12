@@ -60,7 +60,7 @@ def test_imports():
     
     # REPL
     try:
-        from ia.source.repl import FLAIREPL
+        from flai.cli.repl_unified import FLAIUnifiedREPL  # noqa: F401
         print("  ✅ cli.repl")
     except Exception as e:
         errors.append(f"cli.repl: {e}")
@@ -73,7 +73,7 @@ def test_imports():
     else:
         print("✅ TODOS OS IMPORTS FUNCIONAM!")
     
-    return len(errors) == 0
+    assert not errors, errors
 
 if __name__ == "__main__":
     test_imports()

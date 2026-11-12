@@ -1,19 +1,14 @@
 # flai/cli/commands/init.py
 import typer
-import sys
-import json
 import psutil
 import subprocess
 
 from pathlib import Path
-from datetime import datetime
 
 # Importações do seu projeto
-from flai.core.config import create_default_config, FlaiConfig
+from flai.core.config import create_default_config
 from flai.core.config.schemas import validate_config
-from flai.core.platform import get_user_config_dir, normalize_path
-from flai.cli.utils.system import get_system_info
-from flai.cli.utils.models import get_laptop_models
+from flai.core.platform import get_user_config_dir
 from flai.cli.utils.ollama_manager import get_ollama_manager
 from flai.core.project import get_project_root
 from flai.cli.console.console import console
@@ -42,7 +37,7 @@ def handle_init(model_arg: str = None, path: str = ".", verbose: bool = False) -
     """
     Inicializa o ambiente de IA local (Ollama) integrando o OllamaManager.
     """
-    flai_config_dir = get_user_config_dir()
+    get_user_config_dir()  # garante a pasta de configuração do usuário
     try:
         console.print(Panel.fit(
             "🚀 [bold cyan]FLAI[/bold cyan] - Inicializando Setup de IA Local",
@@ -51,7 +46,6 @@ def handle_init(model_arg: str = None, path: str = ".", verbose: bool = False) -
 
         # 1. Definir caminhos e verificar estrutura
         project_root = Path(path).resolve()
-        project_root_str = normalize_path(str(project_root))
         # fleting_project = project_root / DEFAULT_PROJECT_NAME
         fleting_project = get_project_root()
         
@@ -61,7 +55,6 @@ def handle_init(model_arg: str = None, path: str = ".", verbose: bool = False) -
 
         # 2. Análise de Sistema via OllamaManager
         manager = get_ollama_manager()
-        system_info = get_system_info() # Assume-se que esta função retorna o dict básico
         status = manager.check_system()
         
         table = Table(title="📊 Status do Sistema")
@@ -101,16 +94,17 @@ def handle_init(model_arg: str = None, path: str = ".", verbose: bool = False) -
 
         # Opções baseadas na RAM disponível
         if ram_gb < 4:
-            model_table.add_row("1", "deepseek-coder:1.3b", "1.5GB RAM", "Ultra-leve / Código")
-            options = {"1": "deepseek-coder:1.3b"}
+            model_table.add_row("1", "qwen2.5-coder:1.5b", "1.5GB RAM", "Ultra-leve / Código")
+            model_table.add_row("2", "qwen2.5-coder:3b", "2.5GB RAM", "Código + instruções (PT-BR)")
+            options = {"1": "qwen2.5-coder:1.5b", "2": "qwen2.5-coder:3b"}
         else:
-            model_table.add_row("1", "llama3.2:3b", "4GB RAM", "Equilibrado / Chat")
-            model_table.add_row("2", "phi3:mini", "4GB RAM", "Rápido / Lógica")
-            model_table.add_row("3", "deepseek-coder:1.3b", "1.5GB RAM", "Especialista em Código")
+            model_table.add_row("1", "qwen2.5-coder:3b", "2.5GB RAM", "Recomendado / Código + PT-BR")
+            model_table.add_row("2", "qwen2.5-coder:1.5b", "1.5GB RAM", "Mais rápido / Código")
+            model_table.add_row("3", "llama3.2:3b", "3GB RAM", "Chat geral")
             options = {
-                "1": "llama3.2:3b",
-                "2": "phi3:mini",
-                "3": "deepseek-coder:1.3b"
+                "1": "qwen2.5-coder:3b",
+                "2": "qwen2.5-coder:1.5b",
+                "3": "llama3.2:3b"
             }
 
         console.print(model_table)
@@ -129,7 +123,7 @@ def handle_init(model_arg: str = None, path: str = ".", verbose: bool = False) -
             if script_path.exists():
                 console.print("[yellow]⚙️ Otimizando modelo para o hardware detectado...[/yellow]")
                 try:
-                    result = subprocess.run([
+                    subprocess.run([
                         "powershell.exe", "-ExecutionPolicy", "Bypass", "-File",
                         str(script_path), selected_model, optimized_model_name
                     ], capture_output=True, text=True, check=True)

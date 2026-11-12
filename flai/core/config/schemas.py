@@ -289,7 +289,6 @@ def create_default_config(project_path: Path, model: str = "flai-coder") -> Flai
     Returns:
         Configuração padrão
     """
-    from datetime import datetime
     
     return FlaiConfig(
         version="1.0.0",

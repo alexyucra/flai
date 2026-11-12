@@ -3,8 +3,8 @@ Intent Parser - Transforma texto em intenção estruturada
 """
 from .patterns import IntentPatterns
 from .classifier import IntentClassifier 
-from typing import Dict, Optional, List, Any, Tuple
-from flai.core.types import IntentData, IntentType
+from typing import Dict, List
+from flai.core.types import IntentData
 
 class IntentParser:
     """Parser de intenções do usuário"""

@@ -1,12 +1,11 @@
 import sys
-import typer
 from typing import Optional
 import click
 import json
 from pathlib import Path
 from flai.cli.commands.init import handle_init
 from flai.cli.console.console import console
-from flai.cli.console import Table, Panel, Text, box, Rule
+from flai.cli.console import Table, Panel, box
 import traceback
 from flai.core.logging import setup_logging, get_logger
 
@@ -65,20 +64,23 @@ def print_help():
 
         "🤖 Agent Commands": [
             ("flai agent list", "List agents"),
+            ("flai agent show <nome>", "Show agent details"),
             ("flai agent create", "Create custom agent"),
             ("flai agent stats", "Show agent statistics")
         ],
 
         "🎯 Intent Commands": [
-            ("flai intent list", "List supported intents")
+            ("flai intent list", "List supported intents"),
+            ("flai intent test \"<frase>\"", "Test which intent a phrase triggers")
         ],
 
         "⚙️ Config Commands": [
-            ("flai config show", "Show configuration"),
-            ("flai config set", "Set configuration value"),
-            ("flai config unset", "Remove configuration value"),
+            ("flai config", "Open web config panel"),
+            ("flai config show [chave]", "Show configuration"),
+            ("flai config set <chave> <valor>", "Set configuration value"),
+            ("flai config unset <chave>", "Remove configuration value"),
             ("flai config edit", "Edit configuration"),
-            ("flai config init", "Initialize configuration")
+            ("flai config init [--force]", "Initialize configuration")
         ]
     }
     
@@ -237,24 +239,53 @@ def history(project: str, session: Optional[str], export: Optional[str]):
         else:
             click.echo("ℹ️ Nenhuma sessão encontrada")
 
+CONFIG_ACTIONS = ['start', 'show', 'set', 'unset', 'init', 'list', 'edit']
+
+
 @cli.command()
-@click.option('--port', default=8080, help='Porta do painel')
-@click.option('--no-browser', is_flag=True, help='Não abrir o navegador')
-def config(port: int, no_browser: bool):
-    """Abre o painel de configuração web (agentes, intenções, documentações, RAG)"""
-    from flai.cli.commands.config import web_start
-    web_start(port=port, no_browser=no_browser)
+@click.argument('action', required=False, default='start', type=click.Choice(CONFIG_ACTIONS))
+@click.argument('key', required=False)
+@click.argument('value', required=False)
+@click.option('--port', default=8080, help='Porta do painel (start)')
+@click.option('--no-browser', is_flag=True, help='Não abrir o navegador (start)')
+@click.option('--project', '-p', default=None, help='Caminho do projeto (start)')
+@click.option('--force', '-f', is_flag=True, help='Sobrescrever configuração existente (init)')
+def config(action: str, key: Optional[str], value: Optional[str], port: int,
+           no_browser: bool, project: Optional[str], force: bool):
+    """Configuração: start (painel web, padrão) | show [chave] | set <chave> <valor> |
+    unset <chave> | init [--force] | list | edit"""
+    from flai.cli.commands.config import handle_config
+    if action == 'set' and (not key or value is None):
+        raise click.UsageError("Uso: flai config set <chave> <valor>")
+    if action == 'unset' and not key:
+        raise click.UsageError("Uso: flai config unset <chave>")
+    handle_config(action=action, port=port, no_browser=no_browser, project=project,
+                  key=key, value=value, force=force)
 
 
-# flai context ...: documentações gerenciadas (mesmas operações do painel web)
-@cli.command(context_settings={"ignore_unknown_options": True, "allow_extra_args": True,
-                                "help_option_names": []})
-@click.pass_context
-def context(ctx):
-    """Documentações usadas pela IA: list | add | index | search | check | enable | disable | remove"""
-    # O Typer atual embute o próprio Click; delegamos os argumentos ao app Typer.
-    from flai.cli.commands.context import app as context_app
-    context_app(args=ctx.args or ["--help"], prog_name="flai context")
+def _typer_group(name: str, module: str, help_text: str):
+    """
+    Registra um app Typer (flai/cli/commands/<module>.py) como subcomando do CLI Click.
+    O Typer embute o próprio Click, então os argumentos são repassados ao app.
+    """
+    @cli.command(name=name, help=help_text,
+                 context_settings={"ignore_unknown_options": True, "allow_extra_args": True,
+                                   "help_option_names": []})
+    @click.pass_context
+    def _cmd(ctx):
+        import importlib
+        app = importlib.import_module(f"flai.cli.commands.{module}").app
+        app(args=ctx.args or ["--help"], prog_name=f"flai {name}")
+    return _cmd
+
+
+# Documentações gerenciadas (mesmas operações do painel web)
+_typer_group("context", "context",
+             "Documentações usadas pela IA: list | add | index | search | check | enable | disable | remove")
+_typer_group("agent", "agent", "Agentes: list | show | enable | disable | create | stats")
+_typer_group("intent", "intent",
+             "Intenções: list | show | add | remove | pattern-add | keyword-add | enable | "
+             "disable | test | export | import")
 
 def main():
 

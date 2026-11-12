@@ -1,7 +1,7 @@
 from .common import (
     # Resultados
     RouteResult, CRUDResult, FormResult, AnalysisResult,
-    SearchResult, SearchResultItem, LLMResponse, ErrorResult,  # ← ADICIONAR ErrorResult
+    SearchResult, SearchResultItem, LLMResponse, ErrorResult,
     # Contextos
     ProjectContext, IntentData, AgentContext,
     # Callbacks
@@ -12,7 +12,7 @@ from .common import (
 
 __all__ = [
     "RouteResult", "CRUDResult", "FormResult", "AnalysisResult",
-    "SearchResult", "SearchResultItem", "LLMResponse", "ErrorResult",  # ← ADICIONAR
+    "SearchResult", "SearchResultItem", "LLMResponse", "ErrorResult",
     "ProjectContext", "IntentData", "AgentContext",
     "ProgressCallback", "ErrorCallback",
     "IntentType", "ResultType", "AgentStatus"

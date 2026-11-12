@@ -3,7 +3,7 @@
 Agente LLM - Responde usando o modelo de linguagem diretamente
 """
 from pathlib import Path
-from typing import Dict, List, Optional, Any
+from typing import Dict, List
 
 from flai.core.agents.agent_manager import BaseAgent, AgentPriority
 from flai.cli.utils.ollama_manager import get_ollama_manager

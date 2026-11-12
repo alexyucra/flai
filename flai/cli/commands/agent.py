@@ -3,10 +3,8 @@
 Comandos para gerenciar agentes do FLAI
 """
 import typer
-from pathlib import Path
-from typing import Optional
 
-from flai.core.agents.agent_manager import AgentManager, AgentType
+from flai.core.agents.agent_manager import AgentManager
 from flai.cli.console.console import console
 from rich.table import Table
 
@@ -70,7 +68,17 @@ def show_agent(
     
     # Tenta carregar a instância
     instance = manager.load_agent_instance(agent_name)
-    
+    # Nem todo agente embutido declara get_capabilities(): usa os métodos públicos
+    if instance is not None:
+        if callable(getattr(instance, "get_capabilities", None)):
+            capabilities = list(instance.get_capabilities())
+        else:
+            capabilities = sorted(n for n in dir(instance)
+                                  if not n.startswith("_") and callable(getattr(instance, n, None)))
+    else:
+        capabilities = []
+    caps_text = "\n".join(f"  • {c}" for c in capabilities) if instance else "  Agente não carregado"
+
     console.print(f"""
 [bold cyan]Nome:[/bold cyan] {agent.name}
 [bold green]Descrição:[/bold green] {agent.description}
@@ -85,7 +93,7 @@ def show_agent(
 {chr(10).join(f'  • {k}: {v}' for k, v in agent.config.items()) if agent.config else '  Nenhuma'}
 
 [bold]Capacidades (se carregado):[/bold]
-{f'  • {chr(10).join(f"  • {c}" for c in instance.get_capabilities())}' if instance else '  Agente não carregado'}
+{caps_text}
 """)
 
 @app.command("enable")

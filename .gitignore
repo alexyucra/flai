@@ -69,3 +69,6 @@ env.local
 /app
 .python-version
 /source
+/demo
+# MkDocs build
+site/

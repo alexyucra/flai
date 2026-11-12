@@ -5,7 +5,6 @@ import logging
 import sys
 from pathlib import Path
 from typing import Optional
-from datetime import datetime
 
 # Configuração padrão
 DEFAULT_LOG_LEVEL = logging.INFO

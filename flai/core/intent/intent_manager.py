@@ -4,7 +4,7 @@ Gerenciador Dinâmico de Intenções para FLAI
 Permite adicionar/remover/modificar intenções em tempo real
 """
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Callable
+from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
 from enum import Enum
 import yaml
@@ -241,12 +241,7 @@ class IntentManager:
             IntentDefinition(
                 name="exit",
                 description="Sai do programa",
-                patterns=[
-                    r"sair",
-                    r"exit",
-                    r"quit",
-                    r"q"
-                ],
+                patterns=[r"^(?:sair|exit|quit|q)$"],  # frase inteira (r"q" casava "verifique")
                 keywords=["sair", "exit", "quit", "q"],
                 requires_entity=False,
                 examples=["sair", "exit", "q"],

@@ -16,7 +16,6 @@ import os
 import re
 import shutil
 import subprocess
-import sys
 import sysconfig
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Sequence, Tuple
@@ -123,10 +122,11 @@ class FletingExecutor:
         except Exception as e:
             return -1, "", str(e)
 
-    def execute(self, args: Sequence[str]) -> Tuple[int, str]:
+    def execute(self, args: Sequence[str], preconfirmed: bool = False) -> Tuple[int, str]:
         """
         Executa um comando da allowlist, validando nome e pedindo confirmação
         para comandos sensíveis. Retorna (código, saída).
+        preconfirmed=True: o usuário já aprovou um plano que inclui este comando.
         """
         args = [a for a in args if a]
         key = tuple(args[:2]) if tuple(args[:2]) in ALLOWED_COMMANDS else tuple(args[:1])
@@ -146,7 +146,7 @@ class FletingExecutor:
             return 2, f"Uso: fleting {' '.join(key)} (sem argumentos extras)"
 
         full = [*key, *rest]
-        if key in SENSITIVE_COMMANDS:
+        if key in SENSITIVE_COMMANDS and not preconfirmed:
             question = f"Executar 'fleting {' '.join(full)}'? (altera o projeto ou executa código dele)"
             if not (self.confirm and self.confirm(question)):
                 return 3, f"Cancelado: fleting {' '.join(full)}"

@@ -26,8 +26,10 @@ MB = 1024 ** 2
 
 # Folga deixada para o sistema operacional e outros programas
 OS_RESERVE_BYTES = int(1.5 * GB)
-# Buffers de cálculo do llama.cpp (aprox.)
-COMPUTE_OVERHEAD_BYTES = int(0.5 * GB)
+# Folga mínima aceita quando a RAM está apertada (roda com aviso em vez de bloquear)
+MIN_OS_RESERVE_BYTES = int(0.25 * GB)
+# Buffers de cálculo do llama.cpp (aprox.; medido ~0,3 GB no qwen2.5-coder:3b)
+COMPUTE_OVERHEAD_BYTES = int(0.4 * GB)
 # KV cache por token quando o modelo não informa a arquitetura
 FALLBACK_KV_BYTES_PER_TOKEN = 128 * 1024
 
@@ -176,6 +178,14 @@ class ResourceGuard:
         safe = self.max_safe_ctx(fp, ram)
         warnings: List[str] = []
         fits = safe >= MIN_CTX
+        if not fits and self.os_reserve > MIN_OS_RESERVE_BYTES:
+            # A folga do sistema é uma preferência, não um limite: com pouca RAM, roda
+            # com folga mínima (o Windows ainda pode paginar) e avisa, em vez de bloquear.
+            tight = ResourceGuard(lambda: ram, MIN_OS_RESERVE_BYTES).max_safe_ctx(fp, ram)
+            if tight >= MIN_CTX:
+                safe, fits = tight, True
+                warnings.append(f"Pouca RAM livre ({ram.available_gb:.1f} GB): rodando com folga mínima. "
+                                "Feche programas se o sistema ficar lento.")
 
         if not fits:
             effective = MIN_CTX

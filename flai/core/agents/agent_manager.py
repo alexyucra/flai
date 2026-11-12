@@ -3,25 +3,20 @@ Gerenciador Dinâmico de Agentes para FLAI
 Permite registrar, configurar e executar agentes dinamicamente
 """
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Callable, Type
+from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
 from enum import Enum
 import yaml
 import importlib
-import sys
 import json
 from datetime import datetime
 import traceback
 
-import asyncio
 import importlib.util
-from flai.core.async_utils import run_async
 from flai.core.security import (
     safe_name,
     safe_join,
     validate_module_path,
-    UnsafePathError,
-    UnsafeModuleError,
 )
 from flai.core.security.modules import custom_agents_allowed
 
@@ -390,8 +385,15 @@ class AgentManager:
                 module = importlib.import_module(validate_module_path(agent_def.module_path))
             agent_class = getattr(module, agent_def.class_name)
             
-            # Instancia o agente
-            agent_instance = agent_class(self.project_path, agent_def.config)
+            # Instancia o agente. Os embutidos têm assinaturas diferentes: CRUDAgent/DBAgent
+            # recebem `confirm` na 2ª posição, Form/ProjectAgent só o caminho. O dict de
+            # config só é passado para quem declara um parâmetro `config`.
+            import inspect
+            params = inspect.signature(agent_class.__init__).parameters
+            if "config" in params:
+                agent_instance = agent_class(self.project_path, config=agent_def.config)
+            else:
+                agent_instance = agent_class(self.project_path)
             self.agent_instances[agent_name] = agent_instance
             self.loaded_agents[agent_name] = agent_instance
             
@@ -435,26 +437,6 @@ class AgentManager:
                     agents.append(agent)
         
         return agents
-    def execute_pipeline_sync(self, intent: str, entity: str = None,
-                              fields: List[str] = None,
-                              context: Dict = None) -> Dict:
-        """
-        Versão síncrona do execute_pipeline
-        
-        Args:
-            intent: Intenção detectada
-            entity: Entidade extraída
-            fields: Campos extraídos
-            context: Contexto adicional
-        
-        Returns:
-            Resultado da pipeline
-        """
-        return run_async(
-            self.execute_pipeline(intent, entity, fields, context),
-            timeout=60
-        )
-    
     async def execute_pipeline(self, intent: str, entity: str = None,
                                 fields: List[str] = None,
                                 context: Dict = None) -> Dict:

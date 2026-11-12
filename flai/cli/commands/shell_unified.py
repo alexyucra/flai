@@ -73,7 +73,3 @@ def handle_shell_unified(
     cleanup_ollama()
 
 
-# Substitui o shell antigo
-def handle_shell(project: str, model: str, context: Optional[str]):
-    """Wrapper para manter compatibilidade"""
-    handle_shell_unified(project, model, None)

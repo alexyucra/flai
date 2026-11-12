@@ -47,12 +47,15 @@ dependencies = [
     "requests>=2.31",
     "pydantic>=2,<3",
     "unidecode",
+    "prompt_toolkit>=3.0",
 ]
 
 [project.optional-dependencies]
 # RAG: índice local leve (JSON) + embeddings do Ollama. Sem estes pacotes o FLAI
 # usa a API HTTP do Ollama e um divisor de texto interno. Sem chromadb.
 rag = ["langchain-ollama>=0.2", "langchain-text-splitters>=0.3"]
+# Documentação: mkdocs serve / mkdocs build --strict
+docs = ["mkdocs>=1.6,<2", "mkdocs-material>=9.5,<10"]
 # Provedor externo (flai.yml) — reservado, não usado até o FLAI estar finalizado
 remote = ["langchain-groq", "python-dotenv"]
 dev = ["pytest", "pytest-cov"]
@@ -68,7 +71,7 @@ flai = "flai.cli.cli:main"
 # ------------------------
 [project.urls]
 Homepage = "https://github.com/alexyucra/flai"
-Documentation = "https://github.com/alexyucra/flai/tree/main/docs"
+Documentation = "https://alexyucra.github.io/flai/"
 Repository = "https://github.com/alexyucra/flai"
 Issues = "https://github.com/alexyucra/flai/issues"
 

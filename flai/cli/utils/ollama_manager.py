@@ -11,7 +11,7 @@ from typing import Optional, Dict, Any
 # import platform
 from flai.core.platform import (
     get_platform, is_windows, is_linux, is_macos,
-    get_user_cache_dir, normalize_path, Platform
+    get_user_cache_dir
 )
 from .cache import cache
 
@@ -358,9 +358,13 @@ Não faça referência a arquivos ou pastas externas.
         from flai.core.resources import ModelFootprint
         local = self.list_local_models()
         size = local.get(model) or local.get(f"{model}:latest", 0)
-        loaded = self.loaded_models()
-        return ModelFootprint.from_ollama(model, self.show_model(model), size,
-                                          loaded.get(model, 0))
+        # Conta também os derivados flai-<base>:ctx<N> já carregados: é a mesma RAM que
+        # será reaproveitada (antes só o nome base contava e o guard recusava o modelo).
+        from flai.core.resources import optimized_model_name
+        prefix = optimized_model_name(model, 0).rsplit(":", 1)[0] + ":"
+        loaded_bytes = sum(b for name, b in self.loaded_models().items()
+                           if name in (model, f"{model}:latest") or name.startswith(prefix))
+        return ModelFootprint.from_ollama(model, self.show_model(model), size, loaded_bytes)
 
     def base_model_of(self, model: str) -> str:
         """Se `model` é um derivado flai-*, retorna o modelo de origem (FROM)."""
@@ -385,7 +389,8 @@ Não faça referência a arquivos ou pastas externas.
             "model": name,
             "from": base_model,
             "parameters": {"num_ctx": num_ctx, "num_predict": num_predict,
-                           "temperature": temperature},
+                           "temperature": temperature, "top_p": 0.9,
+                           "repeat_penalty": 1.05},
             "stream": False,
         }
         try:
@@ -399,14 +404,21 @@ Não faça referência a arquivos ou pastas externas.
         return None
 
     def generate(self, model: str, prompt: str, options: Optional[Dict] = None,
-                 timeout: int = 300) -> Dict[str, Any]:
+                 timeout: int = 300, on_token=None) -> Dict[str, Any]:
         """
         Gera resposta sem baixar modelos automaticamente.
-        Retorna {"ok", "text", "prompt_tokens", "output_tokens", "truncated_by_ctx"}.
+        Retorna {"ok", "text", "prompt_tokens", "output_tokens", "done_reason"}.
+        on_token(str): se informado, usa streaming e chama a função a cada pedaço.
         """
         if not self.is_server_running() and not (self.auto_start and self.start_server()):
             return {"ok": False, "text": "Erro: servidor Ollama não está rodando"}
-        payload = {"model": model, "prompt": prompt, "stream": False, "options": options or {}}
+        # keep_alive: mantém o modelo carregado entre perguntas (evita recarregar ~2 GB
+        # do disco a cada mensagem). FLAI_KEEP_ALIVE=0 libera a RAM logo após responder.
+        payload = {"model": model, "prompt": prompt, "stream": on_token is not None,
+                   "options": options or {},
+                   "keep_alive": os.environ.get("FLAI_KEEP_ALIVE", "10m")}
+        if on_token is not None:
+            return self._generate_stream(payload, timeout, on_token)
         try:
             r = self._api("POST", "/api/generate", payload, timeout=timeout)
             if r.status_code != 200:
@@ -421,6 +433,98 @@ Não faça referência a arquivos ou pastas externas.
             }
         except Exception as e:
             return {"ok": False, "text": f"Erro ao executar modelo: {e}"}
+
+    def chat(self, model: str, messages: list, tools: Optional[list] = None,
+             options: Optional[Dict] = None, on_token=None, timeout: int = 300) -> Dict[str, Any]:
+        """
+        /api/chat com histórico e ferramentas (tool calling), em streaming.
+        Retorna {"ok", "text", "tool_calls", "prompt_tokens", "output_tokens",
+                 "done_reason", "eval_seconds", "prompt_seconds"}.
+        Mensagens com o mesmo início reaproveitam o KV cache do Ollama (resposta mais rápida).
+        """
+        if not self.is_server_running() and not (self.auto_start and self.start_server()):
+            return {"ok": False, "text": "Erro: servidor Ollama não está rodando", "tool_calls": []}
+        import requests
+        payload = {"model": model, "messages": messages, "stream": True,
+                   "options": options or {},
+                   "keep_alive": os.environ.get("FLAI_KEEP_ALIVE", "10m")}
+        if tools:
+            payload["tools"] = tools
+        parts, calls, last = [], [], {}
+        try:
+            with requests.post(f"{self.server_url}/api/chat", json=payload,
+                               stream=True, timeout=(10, timeout)) as r:
+                if r.status_code != 200:
+                    return {"ok": False, "text": f"Erro API {r.status_code}: {r.text[:200]}",
+                            "tool_calls": []}
+                for line in r.iter_lines():
+                    if not line:
+                        continue
+                    d = json.loads(line)
+                    if d.get("error"):
+                        return {"ok": False, "text": f"Erro do modelo: {d['error']}", "tool_calls": []}
+                    msg = d.get("message") or {}
+                    chunk = msg.get("content", "")
+                    if chunk:
+                        parts.append(chunk)
+                        if on_token:
+                            on_token(chunk)
+                    calls.extend(msg.get("tool_calls") or [])
+                    if d.get("done"):
+                        last = d
+                        break
+        except KeyboardInterrupt:
+            last = {"done_reason": "interrupted"}
+        except Exception as e:
+            return {"ok": False, "text": "".join(parts) + f"\nErro ao executar modelo: {e}",
+                    "tool_calls": []}
+        return {
+            "ok": True,
+            "text": "".join(parts),
+            "tool_calls": calls,
+            "prompt_tokens": last.get("prompt_eval_count", 0),
+            "output_tokens": last.get("eval_count", 0),
+            "done_reason": last.get("done_reason"),
+            "eval_seconds": last.get("eval_duration", 0) / 1e9,
+            "prompt_seconds": last.get("prompt_eval_duration", 0) / 1e9,
+        }
+
+    def _generate_stream(self, payload: Dict, timeout: int, on_token) -> Dict[str, Any]:
+        """Streaming NDJSON de /api/generate: mostra a resposta enquanto é gerada."""
+        import requests
+        parts, last = [], {}
+        try:
+            # timeout=(conexão, intervalo máximo entre pedaços)
+            with requests.post(f"{self.server_url}/api/generate", json=payload,
+                               stream=True, timeout=(10, timeout)) as r:
+                if r.status_code != 200:
+                    return {"ok": False, "text": f"Erro API {r.status_code}: {r.text[:200]}"}
+                for line in r.iter_lines():
+                    if not line:
+                        continue
+                    d = json.loads(line)
+                    if d.get("error"):
+                        return {"ok": False, "text": f"Erro do modelo: {d['error']}"}
+                    chunk = d.get("response", "")
+                    if chunk:
+                        parts.append(chunk)
+                        on_token(chunk)
+                    if d.get("done"):
+                        last = d
+                        break
+        except KeyboardInterrupt:
+            last = {"done_reason": "interrupted"}  # Ctrl+C mantém o que já foi gerado
+        except Exception as e:
+            return {"ok": False, "text": "".join(parts) + f"\nErro ao executar modelo: {e}"}
+        return {
+            "ok": True,
+            "text": "".join(parts),
+            "prompt_tokens": last.get("prompt_eval_count", 0),
+            "output_tokens": last.get("eval_count", 0),
+            "done_reason": last.get("done_reason"),
+            "eval_seconds": last.get("eval_duration", 0) / 1e9,
+            "streamed": True,
+        }
 
     def run_model_cli(self, model: str, prompt: str, timeout: int = 120) -> str:
         """Executa modelo via CLI (fallback)"""
@@ -483,13 +587,12 @@ Não faça referência a arquivos ou pastas externas.
         
         return status
     
-    def ensure_ready(self, model: str = "deepseek-coder:1.3b", verbose: bool = False) -> bool:
+    def ensure_ready(self, model: str = "qwen2.5-coder:3b", verbose: bool = False) -> bool:
         """Garante que tudo está pronto para uso"""
         
         from flai.cli.console.console import console
-        from flai.core.platform import get_user_cache_dir
 
-        cache_dir = get_user_cache_dir()
+        get_user_cache_dir()  # garante a pasta de cache
         
         cache_key = f"ensure_ready_{model}"
         cached = cache.get(cache_key)
@@ -581,20 +684,6 @@ def get_ollama_manager() -> OllamaManager:
     if _ollama_manager is None:
         _ollama_manager = OllamaManager(auto_start=True)
     return _ollama_manager
-
-def run_ollama(model: str, prompt: str) -> str:
-    """Função principal para executar modelos (usada pelo FLAI)"""
-    manager = get_ollama_manager()
-    
-    # Tentar via API primeiro
-    response = manager.run_model(model, prompt)
-    
-    # Se falhar, tentar CLI
-    if response.startswith("Erro:"):
-        logger.error("⚠ API falhou, tentando CLI...")
-        response = manager.run_model_cli(model, prompt)
-    
-    return response
 
 def cleanup_ollama():
     """Limpeza global do Ollama"""

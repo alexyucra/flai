@@ -1,6 +1,6 @@
 # flai/cli/helper/optimize_model.ps1
 param (
-    [string]$BaseModel = "deepseek-coder:1.3b",
+    [string]$BaseModel = "qwen2.5-coder:3b",
     [string]$CustomName = "flai-coder"
 )
 
@@ -13,11 +13,12 @@ $modelfilePath = "$env:TEMP\flai-coder.Modelfile"
 # Removidos parâmetros problemáticos como num_threads que devem ser via CLI/Env
 $modelfileContent = @"
 FROM $BaseModel
-PARAMETER num_ctx 1024
-PARAMETER num_batch 128
-PARAMETER num_predict 256
-PARAMETER temperature 0.8
-PARAMETER repeat_penalty 1.1
+PARAMETER num_ctx 4096
+PARAMETER num_batch 256
+PARAMETER num_predict 768
+PARAMETER temperature 0.2
+PARAMETER top_p 0.9
+PARAMETER repeat_penalty 1.05
 "@
 
 # 3. Salvar o arquivo de forma limpa (Encoding ASCII evita problemas de leitura no Ollama)

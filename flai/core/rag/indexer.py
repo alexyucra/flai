@@ -3,7 +3,6 @@ RAG Indexer - Indexa código do projeto para busca semântica
 LangChain opcional - requer `pip install langchain chromadb`
 """
 from pathlib import Path
-from typing import List, Optional
 
 class Indexer:
     """Indexador de código para RAG"""

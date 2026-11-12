@@ -5,7 +5,6 @@ import sys
 import os
 from pathlib import Path
 from enum import Enum
-from typing import Optional
 
 class Platform(str, Enum):
     WINDOWS = "windows"

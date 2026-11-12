@@ -1,6 +1,6 @@
 from pathlib import Path
 import sys
-from flai.core.platform import normalize_path, is_windows
+from flai.core.platform import normalize_path
 
 def is_fleting_project(path: Path) -> bool:
     return (path / ".fleting").exists()
@@ -12,7 +12,6 @@ def find_project_root(start=None) -> Path | None:
         start = Path(start)
 
     start = start.resolve()
-    start_str = normalize_path(str(start))
 
     if is_fleting_project(start):
         return start
@@ -25,7 +24,6 @@ def find_project_root(start=None) -> Path | None:
 
 def activate_project(root):
     from pathlib import Path
-    import sys
 
     if isinstance(root, str):
         root = Path(root)

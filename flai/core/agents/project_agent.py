@@ -6,7 +6,6 @@ Project Agent - Contexto e análise do projeto
 """
 from pathlib import Path
 from typing import Dict, List, Optional, Any
-import sys
 
 class ProjectAgent:
     def __init__(self, project_path: Optional[Path] = None):
@@ -18,18 +17,23 @@ class ProjectAgent:
             self._structure = {
                 "name": self.project_path.name,
                 "path": str(self.project_path),
-                "models": self._list_dir("models"),
-                "controllers": self._list_dir("controllers"),
-                "views": self._list_dir("views"),
-                "pages": self._list_dir("pages"),
+                "models": self._list_dir("app/models"),
+                "controllers": self._list_dir("app/controllers"),
+                "views": self._list_dir("app/views"),
+                "pages": self._list_dir("app/views/pages"),
             }
         return self._structure
-    
+
     def _list_dir(self, dir_name: str) -> List[str]:
+        """Lista módulos (estrutura Fleting: app/<tipo>/; cai para <tipo>/ na raiz)."""
         dir_path = self.project_path / dir_name
         if not dir_path.exists():
+            dir_path = self.project_path / Path(dir_name).name
+        if not dir_path.exists():
             return []
-        return [f.stem for f in dir_path.glob("*.py") if f.stem != "__init__"]
+        return sorted(f.relative_to(dir_path).with_suffix("").as_posix()
+                      for f in dir_path.rglob("*.py")
+                      if f.stem != "__init__" and "__pycache__" not in f.parts)
     
     def find(self, name: str) -> Optional[Path]:
         for ext in ["", ".py"]:

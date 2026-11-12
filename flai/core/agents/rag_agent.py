@@ -3,7 +3,7 @@
 Agente RAG para busca semântica no código
 """
 from pathlib import Path
-from typing import Dict, List, Optional, Any
+from typing import Dict, List
 
 from flai.core.agents.agent_manager import BaseAgent, AgentPriority
 from flai.core.rag.integrated_rag import IntegratedRAG

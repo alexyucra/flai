@@ -2,7 +2,7 @@
 RAG Retriever - Busca semântica no código
 """
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 
 class Retriever:
     """Recuperador de contexto semântico"""

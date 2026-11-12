@@ -2,7 +2,6 @@
 Intent Classifier - Classificador de intenções (puro, sem LangChain)
 """
 import re
-from unidecode import unidecode
 from typing import Dict, List, Tuple
 from .patterns import IntentPatterns
 from .flet_intents import FLET_DEVELOPER_INTENTS
@@ -116,7 +115,6 @@ class IntentClassifier:
     def suggest_intents(self, text: str, limit: int = 3) -> List[Tuple[str, float]]:
         """Sugere possíveis intenções baseadas em similaridade lexical"""
         suggestions = []
-        text_lower = text.lower()
         text_normalized = self._normalize(text)
         text_words = set(text_normalized.split())
         
